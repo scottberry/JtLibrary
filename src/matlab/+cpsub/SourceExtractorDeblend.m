@@ -67,7 +67,7 @@ if ~isfield(Options,'DetectBias')
 end
 
 % create filter
-Options.Filter = fspecialCP3D('2D LoG',Options.ObSize);
+Options.Filter = cpsub.fspecialCP3D('2D LoG',Options.ObSize);
 
 %[ObjCount BaseImageCC FiltImage] = ObjByFilter(Image,se.Filter,se.ObjThr,se.limQuant,[],se.ObjIntensityThr,true,se.ObjSizeThr);
 %L = labelmatrix(BaseImageCC);
@@ -83,18 +83,18 @@ if Options.doLog
     matThresToTest = linspace(log10(Options.ObjThr+minFiltImage),log10(UpLimit),Options.StepNumber);
     matThresToTest = 10.^matThresToTest;
     matThresToTest = matThresToTest-minFiltImage;
-    
-    
+
+
 else
     UpLimit = quantile(FiltImage(:),0.999);
     matThresToTest = linspace(Options.ObjThr,UpLimit,Options.StepNumber);
-    
+
 end
 
 
 fprintf('%s: Calculating all thresholded images. Total Number %d. ',mfilename,Options.StepNumber)
 tic
-[~, structSegCC] = ObjByFilter(Image,Options.Filter,matThresToTest,...
+[~, structSegCC] = cpsub.ObjByFilter(Image,Options.Filter,matThresToTest,...
     Options.limQuant,Options.ObjSizeThr,Options.ObjIntensityThr,false,Options.ObjSizeThr,Options.DetectBias);
 toc
 
@@ -112,9 +112,9 @@ fprintf('%s: Deblending Images, please wait. ',mfilename)
 tic
 %go via all images
 for i = 1:length(structSegCC)
-    
+
     tempImage = structSegCC{i};
-    
+
     %Calculate centroids of the temporary image
     %propsCentroid = cellAllCentroid{i};
     %     tic
@@ -125,7 +125,7 @@ for i = 1:length(structSegCC)
     %     toc
     % %     calculate centroind without region Props.
     %     oldpropsCentroid=propsCentroid;
-    
+
     %     [a,b]=ind2sub(tempImage.ImageSize,cat(1,tempImage.PixelIdxList{:}));
     %     matLengths = cellfun(@length ,tempImage.PixelIdxList);
     %     numMax = max(matLengths);
@@ -141,37 +141,37 @@ for i = 1:length(structSegCC)
     %     SubIndB = round(nanmean(matMeanB,1));
     %
     %     propsCentroid = sub2ind(size(FiltImage),SubIndA,SubIndB);
-    
-    
+
+
     %       propsCentroid = cellfun(@(x) x(1),tempImage.PixelIdxList);
     %       propsCentroid = cat(1,propsCentroid(:));
-    
+
     propsCentroid = nan(length(tempImage.PixelIdxList),1);
     SubIndA = propsCentroid;
     SubIndB = propsCentroid;
-    
-    
+
+
     for ispot = 1:length(tempImage.PixelIdxList);
-        
+
         propsCentroid(ispot)=tempImage.PixelIdxList{ispot}(1);
         [a,b]=ind2sub(tempImage.ImageSize,tempImage.PixelIdxList{ispot});
-        
+
         SubIndA(ispot) = round(mean(a,1));
         SubIndB(ispot) = round(mean(b,1));
     end
-    
+
     propsCentroid = sub2ind(size(FiltImage),SubIndA,SubIndB);
-    
-    
+
+
     %     [a,b]=ind2sub(tempImage.ImageSize,cat(1,tempImage.PixelIdxList{:}));
     %     cellSubIndexes = mat2cell([a,b],cellfun(@length ,tempImage.PixelIdxList)',2);
     %     propsCentroid = cellfun(@(a) mean(a,1),cellSubIndexes,'uniformoutput',false);
     %     propsCentroid = cat(1,propsCentroid{:});
     %     propsCentroid = round(propsCentroid);
     %     propsCentroid = sub2ind(size(FiltImage),propsCentroid(:,1),propsCentroid(:,2));
-    
-    
-    
+
+
+
     tempIsMemb = ismember(cat(1,BaseImageCC.PixelIdxList{:}),propsCentroid)';
     LengthVector = cellfun(@length, BaseImageCC.PixelIdxList);
     IxSpotsI = cell2mat(arrayfun(@(a,b) ones(1,a).*b,LengthVector,(1:length(BaseImageCC.PixelIdxList)),'uniformoutput',false));
@@ -180,31 +180,31 @@ for i = 1:length(structSegCC)
     IxIJ = sub2ind(size(matTempSort),IxSpotsI,IxSpotsJ);
     matTempSort(IxIJ) = tempIsMemb;
     matBinaryReadout = sum(matTempSort,2)';
-    
-    
+
+
     %matBinaryReadout = cellfun(@(x) sum(ismember(x,propsCentroid)),BaseImageCC.PixelIdxList);
-    
+
     %find spots to be deblended
     matSpottoDebl = find(matBinaryReadout>1);
-    
-    
+
+
     if ~isempty(matSpottoDebl)
-        
+
         tempBasePixelList = BaseImageCC.PixelIdxList(matSpottoDebl);
         cellCentroidIx = cellfun(@(x) find(ismember(propsCentroid,x)), tempBasePixelList,'uniformoutput',false );
-        
+
         %measure intensities for the new spots
         SumSpotInt = mat2cell(arrayfun(@(k) sum(Image(tempImage.PixelIdxList{k})),cell2mat(cellCentroidIx')),...
             cellfun(@length ,cellCentroidIx)',1);
-        
+
         tempTotalIntOverThre = cellfun(@(x) (x./sum(x))>Options.numRatio,SumSpotInt,'uniformoutput',false);
         tempIX = cellfun(@(x) sum(x),tempTotalIntOverThre)>1;
-        
+
         BaseImageCC.PixelIdxList(matSpottoDebl(tempIX)) = [];
         BaseImageCC.PixelIdxList = [BaseImageCC.PixelIdxList tempImage.PixelIdxList(cat(1,cellCentroidIx{tempIX}))];
         BaseImageCC.NumObjects = length(BaseImageCC.PixelIdxList);
     end
-    
+
 end
 toc
 

@@ -15,7 +15,7 @@ function RescaledImage = RescaleImageCP3D(Image,limQuant,RescaleThr,numDownsampl
 % *************************************************************************
 
 % Obtain Minimal and maximal intensity of image;
-[minRescInt maxRescInt] = getImageIntensityExtremaCP3D(Image,limQuant(1), limQuant(2), numDownsampling);
+[minRescInt maxRescInt] = cpsub.getImageIntensityExtremaCP3D(Image,limQuant(1), limQuant(2), numDownsampling);
 % Ensure that minimal and maximal intensity do not exceed input boundaries
 % note that this will prevent that intensities of very dim imags are
 % amplified so that false-positive objects are identified
