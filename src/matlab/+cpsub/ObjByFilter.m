@@ -150,14 +150,14 @@ end
 %%%%  RESCALE INPUT IMAGE %%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-rImage = RescaleImageCP3D(Image,limQuant,RescaleThr,numDownsampling); % note that here rescaling is not normalized to max of 100%=1 as in initial Identifyprimlog2
+rImage = cpsub.RescaleImageCP3D(Image,limQuant,RescaleThr,numDownsampling); % note that here rescaling is not normalized to max of 100%=1 as in initial Identifyprimlog2
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%  FILTER IMAGE  %%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Perform filtering to enhance (spotlike) objects
-rImage = FilterImageCP3D(rImage,Filter);
+rImage = cpsub.FilterImageCP3D(rImage,Filter);
 
 if bnFiltImage == true % if requested, return filtered image
     FiltImage = rImage;
@@ -185,27 +185,27 @@ SegmentationCC{numObjThr}=[];
 for n=1:numObjThr
     % Pixels/Voxels above Threshold
     bw=rImage>ObjThr(n);
-    
+
     if closeHoles == true
         % Close holes if requested
         bw=imfill(bw,'holes');
     end
-    
+
     % Create Segmentation
     vislabel = bwconncomp(bw);    % Use bwconncomp instead of bwlabel(n) to save memory. Note that this is not compatible with ancient matlab versions
-    
+
     if vislabel.NumObjects >= 1  % check if at least one object;
-        
+
         % Discard Objects outside of range
         if bnMinObjSize == true
             visprops = regionprops(vislabel,'Area');    % note that area property will yield volume in 3D;
             vispropsArea = arrayfun(@(x) x.Area, visprops);
             f = vispropsArea < ObjSizeThr(1); % Objects below minimal size
-            
+
             if bnMaxObjSize == true % note that Maximal object size requires setting a minimal object size
                 f = f | (vispropsArea > ObjSizeThr(2));
             end
-            
+
             % update Segmentation
             vislabel.NumObjects=vislabel.NumObjects-sum(f);
             if bnReportSegmentation == true;    % prevent excess calculation / rearrangement if not required
@@ -213,10 +213,10 @@ for n=1:numObjThr
             end
         end
     end
-    
+
     % report results of object count / segmentation
     ObjCount(1,n) = vislabel.NumObjects;
-    
+
     if bnReportSegmentation == true
         if numObjThr == 1    % if only one threshold is specified, directly return segmentation
             SegmentationCC = vislabel;
@@ -224,7 +224,7 @@ for n=1:numObjThr
             SegmentationCC{n}=vislabel;
         end
     end
-    
+
 end
 
 
