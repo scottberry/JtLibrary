@@ -1,11 +1,11 @@
 % Copyright 2016 Markus D. Herrmann, University of Zurich
-% 
+%
 % Licensed under the Apache License, Version 2.0 (the "License");
 % you may not use this file except in compliance with the License.
 % You may obtain a copy of the License at
-% 
+%
 %     http://www.apache.org/licenses/LICENSE-2.0
-% 
+%
 % Unless required by applicable law or agreed to in writing, software
 % distributed under the License is distributed on an "AS IS" BASIS,
 % WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -37,7 +37,7 @@ classdef plotting
             'lr', [0, 1] ...
         );
 
-        IMAGE_RESIZE_FACTOR = 4;
+        IMAGE_RESIZE_FACTOR = 1;
 
     end
 
@@ -517,11 +517,8 @@ classdef plotting
 
             end
 
-            fig = plotlyfig;
-            fig.data = data;
-            fig.layout = layout;
-            jdata = escapechars(m2json(fig.data));
-            jlayout = escapechars(m2json(fig.layout));
+            jdata = escapechars(m2json(data));
+            jlayout = escapechars(m2json(layout));
             fig = sprintf('{"data": %s, "layout": %s}', jdata, jlayout);
 
         end
@@ -530,19 +527,19 @@ classdef plotting
             % Create a color palette in the format required by
             % `plotly <https://plot.ly/python/>`_ based on a
             % `Matlab colormap <mathworks.com/help/matlab/ref/colormap.html>`_.
-            % 
+            %
             % Parameters
             % ----------
             % name: str
             %     name of a Matlab colormap, e.g. ``'gray'``
             % n: integer
             %     number of colors (default: ``256``)
-            % 
+            %
             % Returns
             % -------
             % Cell[Cell[double, char]]
             %     RGB color palette
-            % 
+            %
             % Examples
             % --------
             % >>>create_colorscale('gray', 5)
@@ -572,13 +569,13 @@ classdef plotting
             %   regionprops function using the input images BW and I and the input
             %   property PROPERTY. It returns a matrix L, of the same size as BW,
             %   containing labels of the measured PROPERTY for the connected objects in
-            %   BW. 
-            %   
+            %   BW.
+            %
             %   When PROPERTY is provided as matrix:
             %   L = REGIONPROPS_LABEL_IMAGE(BW,I,PROPERTY,LOGARITHM) returns matrix L
             %   whithout calling the regionprops function.
-            %   
-            %   Input: 
+            %
+            %   Input:
             %   - BW: binary image
             %   - I: intensity image, if you don't want to measure intensities provide
             %     empty matrix [] as second input
@@ -586,7 +583,7 @@ classdef plotting
             %     or matrix (when properties were already calculated)
             %   - LOGARITHM (optional): string, either 'two' for log2, 'ten' for log10,
             %     or 'nat' for log
-            % 
+            %
             %   Output:
             %   IMLABEL: label image containing labels of the measured property.
             %   (Optionally, output is given in logarithmic form.)
@@ -600,7 +597,7 @@ classdef plotting
             elseif nargin == 4
                 useLog = true;
             end
-                
+
             if ischar(Property)
                 matProperty = cell2mat(struct2cell(regionprops(imLogical,imIntensity,Property)))';
             elseif ismatrix(Property)
