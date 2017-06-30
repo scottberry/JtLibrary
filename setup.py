@@ -3,6 +3,7 @@
 ''' distribute- and pip-enabled setup.py '''
 from __future__ import print_function
 import os
+from os.path import abspath, dirname, join, splitext
 import re
 import sys
 import glob
@@ -50,18 +51,10 @@ except ImportError:
 
 import setuptools
 
-def find_scripts():
-    return [s for s in setuptools.findall('bin/')
-            if os.path.splitext(s)[1] != '.pyc']
-
 def get_version():
-    src_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'src', 'python'
-    )
-    sys.path = [src_path] + sys.path
+    sys.path.insert(0, abspath(dirname(__file__)))
     import jtlib
     return jtlib.__version__
-
 
 setuptools.setup(
     name='jtlibrary',
@@ -82,13 +75,13 @@ setuptools.setup(
         'Operating System :: MacOS'
     ],
     scripts=[],
-    packages=setuptools.find_packages(os.path.join('src', 'python')),
-    package_dir={'': 'src/python'},
-    include_package_data=True,
+    packages=['jtlib'],
+    include_package_data=True,  # include files mentioned by MANIFEST.in
     install_requires=[
         'numpy>=1.12.0',
         'pandas>=0.19.2',
         'scipy>=0.16.0',
+        'cached-property>=1.3.0',
         'cython>=0.24',
         'opencv-contrib-python>=3.2',
         'scikit-image>=0.11.3',
@@ -97,6 +90,13 @@ setuptools.setup(
         'colorlover>=0.2.1',
         'plotly>=2.0.0',
         'pyasn1>=0.1.9',
+        'pytest>=2.8.2',
         'ndg-httpsclient>=0.4.0',
+        'sep>=1.0.0',
+        'simpleitk>=1.0.0'
+    ],
+    setup_requires=[
+        'numpy>=1.12.0',
+        'cython>=0.24'
     ]
 )
