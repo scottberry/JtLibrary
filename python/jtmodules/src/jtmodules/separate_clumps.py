@@ -91,30 +91,15 @@ def main(mask, intensity_image, min_area, max_area,
             circularity_img = create_feature_image(
                 values['Morphology_Circularity'].values, labeled_mask
             )
-            area_colorscale = plotting.create_colorscale(
-                'Greens', n_objects,
-                add_background=True, background_color='white'
-            )
-            circularity_colorscale = plotting.create_colorscale(
-                'Blues', n_objects,
-                add_background=True, background_color='white'
-            )
-            convexity_colorscale = plotting.create_colorscale(
-                'Reds', n_objects,
-                add_background=True, background_color='white'
-            )
             plots = [
                 plotting.create_float_image_plot(
-                    area_img, 'ul', colorscale=area_colorscale
+                    area_img, 'ul'
                 ),
                 plotting.create_float_image_plot(
-                    convexity_img, 'ur', colorscale=convexity_colorscale
+                    convexity_img, 'ur'
                 ),
                 plotting.create_float_image_plot(
-                    circularity_img, 'll', colorscale=circularity_colorscale
-                ),
-                plotting.create_mask_image_plot(
-                    clumps_mask, 'lr'
+                    circularity_img, 'll'
                 ),
             ]
             figure = plotting.create_figure(
