@@ -1,0 +1,21 @@
+---
+version: 0.1.0
+
+input:
+
+    - name: image
+      type: LabelImage
+      key:
+      help: Image to be plotted
+
+    - name: plot
+      type: Plot
+      value: false
+      help: Should a figure be created?
+
+output:
+
+    - name: figure
+      type: Figure
+
+

@@ -1,0 +1,33 @@
+---
+version: 0.0.2
+
+input:
+
+    - name: image
+      type: Image
+      key:
+      help: Image that should be converted.
+
+    - name: output_type
+      type: Scalar
+      value: 16-bit
+      options:
+        - 8-bit
+        - 16-bit
+      help: Bit-depth for output.
+
+    - name: plot
+      type: Boolean
+      value: false
+      help: Do you want to plot the result?
+
+output:
+
+    - name: intensity_image
+      type: IntensityImage
+      key: convert_to_intensity.intensity_image
+      help: Intensity image.
+
+    - name: figure
+      type: Figure
+      help: Shows the intensity image.
