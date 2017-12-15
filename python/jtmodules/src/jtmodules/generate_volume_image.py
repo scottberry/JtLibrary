@@ -250,6 +250,69 @@ def filter_vertices_per_cell_alpha_shape(coord_image_abs, mask, alpha, z_step, p
     return filtered_coords_global
 
 
+def smoothed_surface_image = smooth_surface(coordinate_image, mask,
+                                            output_shape, z_step,
+                                            pixel_size, smooth=0.5):
+    from scipy.interpolate import Rbf
+
+    n_cells = np.max(mask)
+    bboxes = mh.labeled.bbox(mask)
+    conversion_factor = z_step / pixel_size
+    smoothed_image_float = np.zeros(shape=output_shape, dtype=np.float_)
+
+    def z_steps_to_abs(z):
+        return float(conversion_factor * z)
+
+    def abs_to_z_steps(z):
+        return int(round(z / conversion_factor))
+
+    for cell in range(1, n_cells + 1):
+        x_min, x_max, y_min, y_max = bboxes[cell]
+        cell_isolated = np.copy(coordinate_image[x_min:x_max, y_min:y_max])
+        label_image_isolated = np.copy(mask[x_min:x_max, y_min:y_max])
+
+        cell_isolated[label_image_isolated != cell] = 0
+        label_image_isolated[label_image_isolated != cell] = 0
+        border_isolated = mh.labeled.bwperim(label_image_isolated, n=4)
+
+        cell_isolated_coords = array_to_coordinate_list(
+            cell_isolated
+        )
+        border_isolated_coords = array_to_coordinate_list(
+            border_isolated.astype(np.float32)
+        )
+
+        # set border coordinates to zero-height.
+        border_isolated_coords_zeroed = [(x, y, 0.0) for (x,y,z) in border_isolated_coords]
+
+        # get coordinates from cell surface
+        all_coords_local = cell_isolated_coords + border_isolated_coords_zeroed
+
+        # convert to absolute positions for z-coordinate
+        all_coords_local = [(x, y, z_steps_to_abs(z)) for (x, y, z) in all_coords_local]
+
+        # generate smoothed surface
+        XI, YI = np.meshgrid(
+            np.arange(start=0, stop=cell_isolated.shape[0], step=1),
+            np.arange(start=0, stop=cell_isolated.shape[1], step=1)
+        )
+
+        XYZ = np.array(all_coords_local)
+        rbf = Rbf(XYZ[:,0], XYZ[:,1], XYZ[:,2],
+                  function='multiquadric', smooth=smooth)
+        ZI = rbf(XI,YI)
+
+        # copy cell to the smoothed image
+        np.copyto(
+            dst=smoothed_image[x_min:x_max, y_min:y_max],
+            src=ZI,
+            where=ZI>0
+        )
+
+        # multiply 'height' by 100 to avoid rounding errors
+    return np.round(smoothed_image_float * 100).astype(np.uint16)
+
+
 def main(image, mask, threshold=25,
          mean_size=6, min_size=10,
          filter_type='log_2d',
@@ -402,6 +465,19 @@ def main(image, mask, threshold=25,
         )
 
         volume_image = volume_image.astype(image.dtype)
+
+        logger.info('smooth cell surface for surface area calculation')
+        filtered_coordinate_image = coordinate_list_to_array(
+            coordinates=filtered_coords_global,
+            shape=np.shape(image[:,:,0]))
+        smoothed_surface_image = smooth_surface(
+            coordinate_image=filtered_coordinate_image,
+            mask=mask,
+            output_shape=np.shape(image[:,:,0]),
+            z_step=z_step,
+            pixel_size=pixel_size
+            smooth=0.5
+        )
 
         logger.debug('set regions outside mask to zero')
         volume_image[mask == 0] = 0
