@@ -250,9 +250,9 @@ def filter_vertices_per_cell_alpha_shape(coord_image_abs, mask, alpha, z_step, p
     return filtered_coords_global
 
 
-def smoothed_surface_image = smooth_surface(coordinate_image, mask,
-                                            output_shape, z_step,
-                                            pixel_size, smooth=0.5):
+def smooth_surface(coordinate_image, mask,
+                   output_shape, z_step,
+                   pixel_size, smooth=0.5):
     from scipy.interpolate import Rbf
 
     n_cells = np.max(mask)
@@ -293,24 +293,25 @@ def smoothed_surface_image = smooth_surface(coordinate_image, mask,
 
         # generate smoothed surface
         XI, YI = np.meshgrid(
-            np.arange(start=0, stop=cell_isolated.shape[0], step=1),
-            np.arange(start=0, stop=cell_isolated.shape[1], step=1)
+            np.arange(start=0, stop=cell_isolated.shape[1], step=1),
+            np.arange(start=0, stop=cell_isolated.shape[0], step=1)
         )
 
         XYZ = np.array(all_coords_local)
-        rbf = Rbf(XYZ[:,0], XYZ[:,1], XYZ[:,2],
+        rbf = Rbf(XYZ[:,1], XYZ[:,0], XYZ[:,2],
                   function='multiquadric', smooth=smooth)
         ZI = rbf(XI,YI)
 
         # copy cell to the smoothed image
         np.copyto(
-            dst=smoothed_image[x_min:x_max, y_min:y_max],
+            dst=smoothed_image_float[x_min:x_max, y_min:y_max],
             src=ZI,
             where=ZI>0
         )
 
         # multiply 'height' by 100 to avoid rounding errors
     return np.round(smoothed_image_float * 100).astype(np.uint16)
+
 
 
 def main(image, mask, threshold=25,
@@ -475,7 +476,7 @@ def main(image, mask, threshold=25,
             mask=mask,
             output_shape=np.shape(image[:,:,0]),
             z_step=z_step,
-            pixel_size=pixel_size
+            pixel_size=pixel_size,
             smooth=0.5
         )
 
