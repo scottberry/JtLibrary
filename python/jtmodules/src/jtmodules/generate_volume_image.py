@@ -321,7 +321,7 @@ def smooth_surface(coordinate_image, mask,
         )
 
         # multiply 'height' by 100 to avoid rounding errors
-    return np.round(smoothed_image_float * 100 * conversion_factor).astype(np.uint16)
+    return np.round(smoothed_image_float * 100 / conversion_factor).astype(np.uint16)
 
 
 def main(image, mask, threshold=25,
