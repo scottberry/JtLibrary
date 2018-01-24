@@ -92,7 +92,7 @@ def slide_surface_params(slide):
     lr_n = len(lr_coords)
 
     logger.debug('number of beads on slide surface in each quadrant' +
-                 'is %d, %d, %d, %d', ul_n, ur_n, ll_n, lr_n)
+                 ' is %d, %d, %d, %d', ul_n, ur_n, ll_n, lr_n)
     if ((ur_n < lim and ll_n < lim and lr_n < lim) or
         (ul_n < lim and ll_n < lim and lr_n < lim) or
         (ul_n < lim and ur_n < lim and lr_n < lim) or
@@ -102,7 +102,7 @@ def slide_surface_params(slide):
 
     if ul_n < lim or ur_n < lim or ll_n < lim or lr_n < lim:
         logger.warn('one or more quadrants has < %d' +
-                    'points on slide surface,' +
+                    ' points on slide surface,' +
                     ' upper-left = %d,' +
                     ' upper-right = %d,' +
                     ' lower-left = %d,' +
@@ -169,6 +169,8 @@ def interpolate_surface(coords, output_shape, method='linear'):
 def localise_bead_maxima_3D(image, labeled_beads, minimum_bead_intensity):
     '''Given a 3D image of beads, and a 3D segmentation image,
     bead maxima are returned as a numpy array'''
+
+    logger.debug('removing beads with intensity < %d', minimum_bead_intensity)
     bead_coords = []
     bboxes = mh.labeled.bbox(labeled_beads)
     for bead in range(np.max(labeled_beads)):
@@ -199,6 +201,9 @@ def filter_vertices_per_cell_alpha_shape(coord_image_abs, mask, alpha, z_step, p
     import alpha_shape
     import random
 
+    logger.debug('filtering vertices with alpha = %d,' +
+                 ' z_step = %0.4f, pixel_size = %0.4f',
+                 alpha, z_step, pixel_size)
     n_cells = np.max(mask)
     bboxes = mh.labeled.bbox(mask)
     conversion_factor = 2.0 * z_step / pixel_size
@@ -267,6 +272,9 @@ def smooth_surface(coordinate_image, mask,
     multiquadric surface'''
     from scipy.interpolate import Rbf
 
+    logger.debug('generating smoothed image with smooth = %0.4f,' +
+                 ' z_step = %0.4f, pixel_size = %0.4f',
+                 smooth, z_step, pixel_size)
     n_cells = np.max(mask)
     bboxes = mh.labeled.bbox(mask)
     conversion_factor = z_step / pixel_size
@@ -411,7 +419,9 @@ def main(image, mask, threshold=25,
         labeled_beads = mh.labeled.remove_regions(labeled_beads, too_small)
         mh.labeled.relabel(labeled_beads, inplace=True)
         logger.info(
-            '%d beads remain after removing small beads', np.max(labeled_beads)
+            '%d beads remain after removing beads with < %d voxels',
+            np.max(labeled_beads),
+            min_size
         )
 
         logger.debug('localise beads in 3D')
@@ -472,7 +482,7 @@ def main(image, mask, threshold=25,
             pixel_size=pixel_size
         )
 
-        logger.info('interpolate cell surface')
+        logger.info('linear interpolation of cell surface')
         volume_image = interpolate_surface(
             coords=np.asarray(filtered_coords_global, dtype=np.uint16),
             output_shape=image[:,:,0].shape,
@@ -485,7 +495,7 @@ def main(image, mask, threshold=25,
         volume_image[mask == 0] = 0
 
         if smooth > 0:
-            logger.info('smoothing cell surface with parameter %0.2f', smooth)
+            logger.info('smoothing cell surface with parameter %0.4f', smooth)
             filtered_coordinate_image = coordinate_list_to_array(
                 coordinates=np.array(filtered_coords_global, dtype=np.uint16),
                 shape=image[:,:,0].shape)
