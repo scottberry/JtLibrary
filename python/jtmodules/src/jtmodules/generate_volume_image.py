@@ -519,6 +519,7 @@ def main(image, mask, threshold=25,
         )
         volume_image_calculated = False
         volume_image = np.zeros(shape=image[:,:,0].shape, dtype=image.dtype)
+        smoothed_surface_image = volume_image
 
     if (plot and volume_image_calculated):
         logger.debug('convert bottom surface plane to image for plotting')
