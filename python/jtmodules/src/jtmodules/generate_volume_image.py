@@ -20,9 +20,11 @@ from jtlib.filter import log_2d, log_3d
 
 logger = logging.getLogger(__name__)
 
-VERSION = '0.3.0'
+VERSION = '0.4.0'
 
-Output = collections.namedtuple('Output', ['volume_image', 'figure'])
+Output = collections.namedtuple(
+    'Output', ['volume_image', 'smoothed_surface_image', 'figure']
+)
 Beads = collections.namedtuple('Beads', ['coordinates', 'coordinate_image'])
 
 
@@ -90,7 +92,7 @@ def slide_surface_params(slide):
     lr_n = len(lr_coords)
 
     logger.debug('number of beads on slide surface in each quadrant' +
-                 'is %d, %d, %d, %d', ul_n, ur_n, ll_n, lr_n)
+                 ' is %d, %d, %d, %d', ul_n, ur_n, ll_n, lr_n)
     if ((ur_n < lim and ll_n < lim and lr_n < lim) or
         (ul_n < lim and ll_n < lim and lr_n < lim) or
         (ul_n < lim and ur_n < lim and lr_n < lim) or
@@ -100,7 +102,7 @@ def slide_surface_params(slide):
 
     if ul_n < lim or ur_n < lim or ll_n < lim or lr_n < lim:
         logger.warn('one or more quadrants has < %d' +
-                    'points on slide surface,' +
+                    ' points on slide surface,' +
                     ' upper-left = %d,' +
                     ' upper-right = %d,' +
                     ' lower-left = %d,' +
@@ -141,6 +143,8 @@ def interpolate_surface(coords, output_shape, method='linear'):
     interpolation is returned as a numpy array'''
     from scipy.interpolate import griddata
 
+    coords = coords.astype(np.float32)
+
     xy = np.column_stack((coords[:, 0], coords[:, 1]))
     xv, yv = np.meshgrid(
         range(output_shape[0]),
@@ -163,6 +167,10 @@ def interpolate_surface(coords, output_shape, method='linear'):
 
 
 def localise_bead_maxima_3D(image, labeled_beads, minimum_bead_intensity):
+    '''Given a 3D image of beads, and a 3D segmentation image,
+    bead maxima are returned as a numpy array'''
+
+    logger.debug('removing beads with intensity < %d', minimum_bead_intensity)
     bead_coords = []
     bboxes = mh.labeled.bbox(labeled_beads)
     for bead in range(np.max(labeled_beads)):
@@ -188,9 +196,14 @@ def localise_bead_maxima_3D(image, labeled_beads, minimum_bead_intensity):
 
 
 def filter_vertices_per_cell_alpha_shape(coord_image_abs, mask, alpha, z_step, pixel_size):
+    '''Vertices are filtered based on whether their coordinates form a
+    likely part of a cell. This step is for rejection of spatial outliers'''
     import alpha_shape
     import random
 
+    logger.debug('filtering vertices with alpha = %d,' +
+                 ' z_step = %0.4f, pixel_size = %0.4f',
+                 alpha, z_step, pixel_size)
     n_cells = np.max(mask)
     bboxes = mh.labeled.bbox(mask)
     conversion_factor = 2.0 * z_step / pixel_size
@@ -250,12 +263,82 @@ def filter_vertices_per_cell_alpha_shape(coord_image_abs, mask, alpha, z_step, p
     return filtered_coords_global
 
 
+def smooth_surface(coordinate_image, mask,
+                   output_shape, z_step,
+                   pixel_size, smooth=0.5):
+    '''For surface area calculations, it is necessary to smooth the
+    volume image, this is done on a per-cell basis to reduce memory
+    requirements. A list of filtered coordinates is used to fit a
+    multiquadric surface'''
+    from scipy.interpolate import Rbf
+
+    logger.debug('generating smoothed image with smooth = %0.4f,' +
+                 ' z_step = %0.4f, pixel_size = %0.4f',
+                 smooth, z_step, pixel_size)
+    n_cells = np.max(mask)
+    bboxes = mh.labeled.bbox(mask)
+    conversion_factor = z_step / pixel_size
+    smoothed_image_float = np.zeros(shape=output_shape, dtype=np.float32)
+
+    def z_steps_to_abs(z):
+        return float(conversion_factor * z)
+
+    def abs_to_z_steps(z):
+        return int(round(z / conversion_factor))
+
+    for cell in range(1, n_cells + 1):
+        x_min, x_max, y_min, y_max = bboxes[cell]
+        cell_isolated = np.copy(coordinate_image[x_min:x_max, y_min:y_max])
+        label_image_isolated = np.copy(mask[x_min:x_max, y_min:y_max])
+
+        cell_isolated[label_image_isolated != cell] = 0
+        label_image_isolated[label_image_isolated != cell] = 0
+        border_isolated = mh.labeled.bwperim(label_image_isolated, n=4)
+
+        cell_isolated_coords = array_to_coordinate_list(
+            cell_isolated
+        )
+        border_isolated_coords = array_to_coordinate_list(
+            border_isolated.astype(np.float32)
+        )
+
+        # set border coordinates to zero-height.
+        border_isolated_coords_zeroed = [(x, y, 0.0) for (x,y,z) in border_isolated_coords]
+
+        # get coordinates from cell surface
+        all_coords_local = cell_isolated_coords + border_isolated_coords_zeroed
+
+        # convert to absolute positions for z-coordinate
+        all_coords_local = [(x, y, z_steps_to_abs(z)) for (x, y, z) in all_coords_local]
+
+        # generate smoothed surface
+        XI, YI = np.meshgrid(
+            np.arange(start=0, stop=cell_isolated.shape[1], step=1),
+            np.arange(start=0, stop=cell_isolated.shape[0], step=1)
+        )
+
+        XYZ = np.array(all_coords_local)
+        rbf = Rbf(XYZ[:,1], XYZ[:,0], XYZ[:,2],
+                  function='multiquadric', smooth=smooth)
+        ZI = rbf(XI,YI)
+
+        # copy cell to the smoothed image
+        np.copyto(
+            dst=smoothed_image_float[x_min:x_max, y_min:y_max],
+            src=ZI, where=ZI > 0
+        )
+
+        # multiply 'height' by 100 to avoid rounding errors
+    return np.round(smoothed_image_float * 100 / conversion_factor).astype(np.uint16)
+
+
 def main(image, mask, threshold=25,
          mean_size=6, min_size=10,
          filter_type='log_2d',
          minimum_bead_intensity=150,
          z_step=0.333, pixel_size=0.1625,
-         alpha=0, plot=False):
+         alpha=0, smooth=0,
+         plot=False):
     '''Converts an image stack with labelled cell surface to a cell
     `volume` image
 
@@ -284,6 +367,9 @@ def main(image, mask, threshold=25,
     alpha: float, optional
         value of parameter for 3D alpha shape calculation
         (default: ``0``, no vertex filtering performed)
+    smooth: float, optional
+        value of parameter for smoothing for smoothed_surface_image
+        (default: ``0``, no smoothed surface image generated)
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
@@ -333,7 +419,9 @@ def main(image, mask, threshold=25,
         labeled_beads = mh.labeled.remove_regions(labeled_beads, too_small)
         mh.labeled.relabel(labeled_beads, inplace=True)
         logger.info(
-            '%d beads remain after removing small beads', np.max(labeled_beads)
+            '%d beads remain after removing beads with < %d voxels',
+            np.max(labeled_beads),
+            min_size
         )
 
         logger.debug('localise beads in 3D')
@@ -394,17 +482,36 @@ def main(image, mask, threshold=25,
             pixel_size=pixel_size
         )
 
-        logger.info('interpolate cell surface')
+        logger.info('linear interpolation of cell surface')
         volume_image = interpolate_surface(
             coords=np.asarray(filtered_coords_global, dtype=np.uint16),
-            output_shape=np.shape(image[:,:,0]),
+            output_shape=image[:,:,0].shape,
             method='linear'
         )
 
-        volume_image = volume_image.astype(image.dtype)
+        volume_image = (100.0 * volume_image).astype(image.dtype)
 
         logger.debug('set regions outside mask to zero')
         volume_image[mask == 0] = 0
+
+        if smooth > 0:
+            logger.info('smoothing cell surface with parameter %0.4f', smooth)
+            filtered_coordinate_image = coordinate_list_to_array(
+                coordinates=np.array(filtered_coords_global, dtype=np.uint16),
+                shape=image[:,:,0].shape)
+            smoothed_surface_image = smooth_surface(
+                coordinate_image=filtered_coordinate_image,
+                mask=mask,
+                output_shape=np.shape(image[:,:,0]),
+                z_step=z_step,
+                pixel_size=pixel_size,
+                smooth=smooth
+            )
+        else:
+            logger.info('omitting cell surface smoothing')
+            smoothed_surface_image = np.zeros(
+                shape=image[:,:,0].shape, dtype=image.dtype
+            )
 
     else:
         logger.warn(
@@ -412,6 +519,7 @@ def main(image, mask, threshold=25,
         )
         volume_image_calculated = False
         volume_image = np.zeros(shape=image[:,:,0].shape, dtype=image.dtype)
+        smoothed_surface_image = volume_image
 
     if (plot and volume_image_calculated):
         logger.debug('convert bottom surface plane to image for plotting')
@@ -432,6 +540,9 @@ def main(image, mask, threshold=25,
             ),
             plotting.create_intensity_image_plot(
                 volume_image, 'ur', clip=True
+            ),
+            plotting.create_intensity_image_plot(
+                smoothed_surface_image, 'lr', clip=True
             )
 
         ]
@@ -441,4 +552,4 @@ def main(image, mask, threshold=25,
     else:
         figure = str()
 
-    return Output(volume_image, figure)
+    return Output(volume_image, smoothed_surface_image, figure)

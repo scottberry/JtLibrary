@@ -1,5 +1,5 @@
 ---
-version: 0.3.0
+version: 0.4.0
 
 input:
 
@@ -67,6 +67,13 @@ input:
       value of parameter for 3D alpha shape calculation
         (default: 0, no vertex filtering performed)
 
+  - name: smooth
+    type: Numeric
+    value: 0
+    help: >
+      value of parameter for surface smoothing
+        (default: 0, no smoothed surface image generated)
+
   - name: plot
     type: Plot
     value: false
@@ -79,11 +86,18 @@ output:
     key: generate_volume_image.volume_image
     help: >
       Intensity image in which pixel values represent the surface
-      height (in z-slices) above the slide.
+      height (in z-slices) above the slide (multiplied by 100).
+
+  - name: smoothed_surface_image
+    type: IntensityImage
+    key: generate_volume_image.smoothed_surface_image
+    help: >
+      The same as the volume image, except smoothed for surface area
+      calculations.
 
   - name: figure
     type: Figure
     help: >
       "Maximum intensity projection" of beads, computed "slide
-      surface", and final volume image"
+      surface", volume and smoothed surface images"
 
