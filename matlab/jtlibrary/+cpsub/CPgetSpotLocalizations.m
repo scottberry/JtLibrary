@@ -1,5 +1,14 @@
 function matLocalizationMeasurements = CPgetSpotLocalizations(tempParentLocation,tempChildrenLocation,tempThirdLoc,CurrCellMembraneLocalization,tempTotalChildren,matEdge_NonEdge,matPerVector,matRadiousVector,i)
 % Support Function which calculates multiple spatial features of spots;
+%
+%   ----------------------------------
+%   Authors:
+%   Nico Battich
+%   Thomas Stoeger
+%   Lucas Pelkmans
+%   
+%   Battich et al. 2013
+%   Website: http://www.imls.uzh.ch/research/pelkmans.html
 
 % global settings
 
