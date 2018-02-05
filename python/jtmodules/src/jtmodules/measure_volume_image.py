@@ -18,7 +18,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-VERSION = '0.0.5'
+VERSION = '0.0.6'
 
 Output = collections.namedtuple('Output', ['measurements', 'figure'])
 
@@ -101,7 +101,8 @@ class Morphology3D(jtlib.features.Features):
             img = self.get_object_intensity_image(obj)
 
             # Set all non-object pixels to NaN
-            img_nan = img.astype(np.float)
+            # Divide volume image values by 100.0 to get height in z-slices
+            img_nan = img.astype(np.float) / 100.0
             img_nan[~mask] = np.nan
 
             # Calculate region properties and upper surface area
