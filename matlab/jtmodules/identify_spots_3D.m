@@ -164,9 +164,11 @@ classdef identify_spots_3D
 
             if plot
                 % make a projection of the image into 2D to plot
+                max_proj = max(image,[],3)
                 plots = { ...
-                jtlib.plotting.create_intensity_image_plot(max(image,[],3), 'ul'), ...
-                jtlib.plotting.create_intensity_image_plot(occupancy_image, 'ur')};
+                jtlib.plotting.create_intensity_image_plot(max_proj, 'ul', 'clip', false), ...
+                jtlib.plotting.create_intensity_image_plot(occupancy_image, 'ur'), ...
+                jtlib.plotting.create_overlay_image_plot(max_proj, occupancy_image, 'll','clip', false)};
                 figure = jtlib.plotting.create_figure(plots);
             else
                 figure = '';
