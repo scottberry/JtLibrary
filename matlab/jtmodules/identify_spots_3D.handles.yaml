@@ -74,7 +74,7 @@ input:
 
 output:
 
-    - name: spots
+    - name: occupancy_image
       type: IntensityImage
       key: identify_spots_3D.occupancy_image
       help: >

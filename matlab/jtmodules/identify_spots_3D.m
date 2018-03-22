@@ -121,9 +121,9 @@ classdef identify_spots_3D
 
             % Set options for function calls
             Options.ObSize = double(spot_size);
-            % corresponds to the initial sigma used for spot detection by 
+            % corresponds to the initial sigma used for spot detection by
             % Sumengen in the initial IdentifyPrimLoG2 module
-            Options.Sigma = double((spot_size-1)/3); 
+            Options.Sigma = double((spot_size-1)/3);
             Options.StackDepth = double(n_planes);
             Options.limQuant = double(rescale_quantiles);
             Options.RescaleThr = double(rescale_thresholds);
@@ -145,7 +145,7 @@ classdef identify_spots_3D
             else
                 error(['Image processing was canceled in identify_spots_3D because filter type was not recognised.']);
             end
-            
+
             % Segment spots
             [ObjCount SegmentationCC] = cpsub.ObjByFilter( ...
                 double(image), log_filter, ...
@@ -160,13 +160,13 @@ classdef identify_spots_3D
                 end
             end
 
-            occupancy_image = cpsub.coordinates_to_occupancy_image(Centroid, size(image(:,:,1)));
-            
+            occupancy_image = uint16(cpsub.coordinates_to_occupancy_image(Centroid, size(image(:,:,1))));
+
             if plot
+                % make a projection of the image into 2D to plot
                 plots = { ...
-                jtlib.plotting.create_intensity_image_plot(image, 'ul'), ...
-                jtlib.plotting.create_mask_image_plot(spots_deblend, 'ur'), ...
-                jtlib.plotting.create_mask_image_plot(spots, 'll')};
+                jtlib.plotting.create_intensity_image_plot(max(image,[],3), 'ul'), ...
+                jtlib.plotting.create_intensity_image_plot(occupancy_image, 'ur')};
                 figure = jtlib.plotting.create_figure(plots);
             else
                 figure = '';
