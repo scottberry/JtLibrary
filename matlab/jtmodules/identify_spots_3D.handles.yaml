@@ -28,6 +28,12 @@ input:
           Gaussian filter of this size will be used to enhance the radial
           signal of that size.
 
+    - name: n_planes
+      type: Numeric
+      value: 3
+      help: >
+          Number of z-planes to use in image filter (in case of 3D filter).
+
     - name: rescale_quantiles
       type: Sequence
       value: [0.01, 0.99]

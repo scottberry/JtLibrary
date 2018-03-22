@@ -107,8 +107,8 @@ classdef identify_spots_3D
 
     methods (Static)
 
-        function [spots, figure] = main(image, log_filter_type, ...
-            spot_size, ...
+        function [occupancy_image, figure, filt_image] = main(image, log_filter_type, ...
+            spot_size, n_planes, ...
             rescale_quantiles, rescale_thresholds, ...
             detection_threshold, ...
             plot)
@@ -121,6 +121,10 @@ classdef identify_spots_3D
 
             % Set options for function calls
             Options.ObSize = double(spot_size);
+            % corresponds to the initial sigma used for spot detection by 
+            % Sumengen in the initial IdentifyPrimLoG2 module
+            Options.Sigma = double((spot_size-1)/3); 
+            Options.StackDepth = double(n_planes);
             Options.limQuant = double(rescale_quantiles);
             Options.RescaleThr = double(rescale_thresholds);
             Options.ObjIntensityThr = [];
@@ -134,18 +138,19 @@ classdef identify_spots_3D
             % Get the LoG filter kernel
             if log_filter_type == '2D'
                 op = '2D LoG';
+                log_filter = cpsub.fspecialCP3D(op,Options.ObSize,Options.Sigma);
             elseif log_filter_type == '3D'
                 op = '3D LoG, Raj';
+                log_filter = cpsub.fspecialCP3D(op,Options.ObSize,Options.Sigma,Options.StackDepth);
             else
                 error(['Image processing was canceled in identify_spots_3D because filter type was not recognised.']);
             end
-            log_filter = cpsub.fspecialCP3D(op,Options.ObSize);
-
+            
             % Segment spots
             [ObjCount SegmentationCC] = cpsub.ObjByFilter( ...
                 double(image), log_filter, ...
                 Options.ObjThr, Options.limQuant, Options.RescaleThr, ...
-                Options.ObjIntensityThr, false, [], Options.DetectBias)
+                Options.ObjIntensityThr, false, [], Options.DetectBias);
 
             if SegmentationCC.NumObjects ~= 0 % determine centroid, if at least one object
                 tmp = regionprops(SegmentationCC,'Centroid');
@@ -155,6 +160,8 @@ classdef identify_spots_3D
                 end
             end
 
+            occupancy_image = cpsub.coordinates_to_occupancy_image(Centroid, size(image(:,:,1)));
+            
             if plot
                 plots = { ...
                 jtlib.plotting.create_intensity_image_plot(image, 'ul'), ...
