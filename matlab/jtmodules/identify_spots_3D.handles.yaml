@@ -22,7 +22,7 @@ input:
 
     - name: spot_size
       type: Numeric
-      value: 5
+      value: 4
       help: >
           Approximate size of spots (diameter in pixels). A Laplacian of
           Gaussian filter of this size will be used to enhance the radial
@@ -61,7 +61,7 @@ input:
 
     - name: detection_threshold
       type: Numeric
-      value: 0.02
+      value: 0.08
       help: >
           Threshold for spot detection intensity in rescaled image on a scale
           of 0-1 (default: 0.02). Spots in the rescaled / LoG-filtered image
