@@ -44,7 +44,7 @@ def main(image, n, plot=False):
     # NOTE: code from CellProfiler module "expandorshrink"
     # NOTE (S.B. 25.1.2018): renamed from "expand" to "expand_or_shrink"
     expanded_image = image.copy()
-    print n
+
     if (n > 0):
         logger.info('expanding objects by %d pixels',n)
         background = image == 0
@@ -56,7 +56,6 @@ def main(image, n, plot=False):
 
     elif (n < 0):
         logger.info('shrinking objects by %d pixels',abs(n))
-        print 'shrinking'
         objects = image != 0
         distance = ndi.distance_transform_edt(
             objects, return_indices=False
