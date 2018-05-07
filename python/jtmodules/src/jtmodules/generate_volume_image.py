@@ -451,7 +451,7 @@ def main(image, mask, threshold=25,
             volume_image = np.zeros(shape=image[:,:,0].shape,
                                     dtype=image.dtype)
             figure = str()
-            return Output(volume_image, figure)
+            return Output(volume_image, volume_image, figure)
 
         logger.debug('subtract slide surface to get absolute bead coordinates')
         bead_coords_abs = []
