@@ -1,7 +1,9 @@
 function [Output] = SourceExtractorDeblend(Image,BaseImageCC,FiltImage,Options)
 
 %[NB] this function is an implementation of the spots deblendig algorithm
-%of source extractor Bertin et al. 1996
+%of source extractor 
+% Bertin, E., and Arnouts, S. (1996). SExtractor: Software for source
+% extraction. Astron. Astrophys. Suppl. Ser. 117, 393–404.
 %Usage: [OutputCC] = SourceExtractorDeblend(Image,BaseImageCC,FiltImage,Options)
 %Where Image is the original image to be segmented. BaseImageCC is the base
 %segmentation of the image, FiltImage is the LoG Filter image of Image (the
@@ -17,6 +19,15 @@ function [Output] = SourceExtractorDeblend(Image,BaseImageCC,FiltImage,Options)
 %Options.ObjThr = 0.02;
 %Options.StepNumber = 50;
 %Options.DetectBias = DetectionBias;
+%
+%   ----------------------------------
+%   Authors:
+%   Nico Battich
+%   Thomas Stoeger
+%   Lucas Pelkmans
+%   
+%   Battich et al. 2013
+%   Website: http://www.imls.uzh.ch/research/pelkmans.html
 
 if nargin < 4
     Options = struct();
