@@ -101,7 +101,7 @@
 classdef identify_spots_3D
     properties (Constant = true)
 
-        VERSION = '0.0.1'
+        VERSION = '0.0.2'
 
     end
 
@@ -110,7 +110,7 @@ classdef identify_spots_3D
         function [occupancy_image, figure] = main(image, log_filter_type, ...
             spot_size, n_planes, ...
             rescale_quantiles, rescale_thresholds, ...
-            detection_threshold, ...
+            detection_threshold, minimum_spot_intensity, ...
             plot)
 
             % Reset omitted thresholds in +/-Inf
@@ -127,7 +127,11 @@ classdef identify_spots_3D
             Options.StackDepth = double(n_planes);
             Options.limQuant = double(rescale_quantiles);
             Options.RescaleThr = double(rescale_thresholds);
-            Options.ObjIntensityThr = [];
+            if minimum_spot_intensity == 0
+                Options.ObjIntensityThr = [];
+            else
+                Options.ObjIntensityThr = double(minimum_spot_intensity);
+            end
             Options.closeHoles = false;
             Options.ObjSizeThr = [];
             Options.ObjThr = detection_threshold;

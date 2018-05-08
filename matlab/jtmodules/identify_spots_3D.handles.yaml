@@ -1,5 +1,5 @@
 ---
-version: 0.0.1
+version: 0.0.2
 
 input:
 
@@ -66,6 +66,13 @@ input:
           Threshold for spot detection intensity in rescaled image on a scale
           of 0-1 (default: 0.02). Spots in the rescaled / LoG-filtered image
           with intensity below this value will not be detected.
+
+    - name: minimum_spot_intensity
+      type: Numeric
+      value: 0
+      help: >
+          Minimum intensity (in original image) to considered part of a spot
+          (default: 0 to ignore this option).
 
     - name: plot
       type: Plot
