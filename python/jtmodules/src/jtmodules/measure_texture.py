@@ -22,7 +22,8 @@ Output = collections.namedtuple('Output', ['measurements', 'figure'])
 
 
 def main(extract_objects, assign_objects, intensity_image, aggregate,
-        measure_haralick=False, plot=False):
+         frequencies=[1,5,10], radii=[1,5,10],
+         measure_haralick=False, scales=[1], plot=False):
     '''Measures texture features for objects in `extract_objects` based
     on grayscale values in `intensity_image` and assign them to `assign_objects`.
 
@@ -37,6 +38,13 @@ def main(extract_objects, assign_objects, intensity_image, aggregate,
     aggregate: bool, optional
         whether measurements should be aggregated in case `extract_objects`
         and `assign_objects` have a many-to-one relationship
+    frequencies: Set[int], optional
+        frequencies of the Gabor filters (default: ``{1, 5, 10}``)
+    radii: Set[int], optional
+        radii for defining pixel neighbourhood for Local Binary Patterns
+        (LBP) (default: ``{1, 5, 10}``)
+    scales: Set[int], optional
+        scales at which to compute the Haralick textures
     measure_haralick: bool, optional
         whether *Haralick* features should be extracted
     plot: bool, optional
@@ -51,7 +59,11 @@ def main(extract_objects, assign_objects, intensity_image, aggregate,
     :class:`jtlib.features.Texture`
     '''
     f = jtlib.features.Texture(
-        label_image=extract_objects, intensity_image=intensity_image,
+        label_image=extract_objects,
+        intensity_image=intensity_image,
+        frequencies=set(frequencies),
+        radius=set(radii),
+        scales=set(scales),
         compute_haralick=measure_haralick
     )
 

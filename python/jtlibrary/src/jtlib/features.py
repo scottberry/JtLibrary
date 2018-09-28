@@ -436,7 +436,7 @@ class Texture(Features):
 
     def __init__(self, label_image, intensity_image,
             theta_range=4, frequencies={1, 5, 10}, radius={1, 5, 10},
-            threshold=None, compute_haralick=False):
+            scales={1}, threshold=None, compute_haralick=False):
         '''
         Parameters
         ----------
@@ -450,6 +450,8 @@ class Texture(Features):
             filters (default: ``4``)
         frequencies: Set[int], optional
             frequencies of the Gabor filters (default: ``{1, 5, 10}``)
+        scales: Set[int], optional
+            scales at which to compute the Haralick textures
         threshold: int, optional
             threshold value for Threshold Adjacency Statistics (TAS)
             (defaults to value computed by Otsu's method)
@@ -464,6 +466,7 @@ class Texture(Features):
         self.theta_range = theta_range
         self.frequencies = frequencies
         self.radius = radius
+        self.scales = scales
         if threshold is None:
             self._threshold = mh.otsu(intensity_image)
         else:
@@ -478,6 +481,10 @@ class Texture(Features):
         if not all([isinstance(f, int) for f in self.frequencies]):
             raise TypeError(
                 'Elements of argument "frequencies" must have type int.'
+            )
+        if not all([isinstance(f, int) for s in self.scales]):
+            raise TypeError(
+                'Elements of argument "scales" must have type int.'
             )
         self.compute_haralick = compute_haralick
 
@@ -494,7 +501,7 @@ class Texture(Features):
         for r in self.radius:
             names.extend(['LBP-radius-%d-%d' % (r, i) for i in xrange(36)])
         if self.compute_haralick:
-            names.extend([
+            haralick_names = [
                 'Haralick-angular-second-moment',
                 'Haralick-contrast',
                 'Haralick-correlation',
@@ -508,7 +515,9 @@ class Texture(Features):
                 'Haralick-diff-entropy',
                 'Haralick-info-measure-corr-1',
                 'Haralick-info-measure-corr-2'
-            ])
+            ]
+            for s in self.scales:
+                names.extend([h + "-" + str(s) for h in haralick_names])
         return names
 
     def extract(self):
@@ -523,6 +532,7 @@ class Texture(Features):
         '''
         # Create an empty dataset in case no objects were detected
         logger.info('extract texture features')
+        logger.info('hello')
         features = list()
         for obj in self.object_ids:
             mask = self.get_object_mask_image(obj)
@@ -565,19 +575,27 @@ class Texture(Features):
                 values.extend(vals)
             if self.compute_haralick:
                 # Haralick
-                logger.debug('extract Haralick features for object #%d', obj)
-                # NOTE: Haralick features are computed on 8-bit images.
-                clipped_img = np.clip(img, 0, self._clip_value)
-                rescaled_img = mh.stretch(clipped_img)
-                haralick_values = mh.features.haralick(
-                    img, ignore_zeros=False, return_mean=True
-                )
-                if not isinstance(haralick_values, np.ndarray):
-                    # NOTE: setting `ignore_zeros` to True creates problems for some
-                    # objects, when all values of the adjacency matrices are zeros
-                    haralick_values = np.empty((len(self.names), ), dtype=float)
-                    haralick_values[:] = np.NAN
-                values.extend(haralick_values)
+                for scale in self.scales:
+                    logger.debug('extract Haralick features for object #%d at scale %d', obj, scale)
+                    # NOTE: Haralick features are computed on 8-bit images.
+                    clipped_img = np.clip(img, 0, self._clip_value)
+                    rescaled_img = mh.stretch(clipped_img)
+                    try:
+                        haralick_values = mh.features.haralick(
+                            rescaled_img,
+                            ignore_zeros=True,
+                            return_mean=True,
+                            distance=scale
+                        )
+                    except ValueError:
+                        haralick_values[:] = np.NAN
+
+                    if not isinstance(haralick_values, np.ndarray):
+                        # NOTE: setting `ignore_zeros` to True creates problems for some
+                        # objects, when all values of the adjacency matrices are zeros
+                        haralick_values = np.empty((len(self.names), ), dtype=float)
+                        haralick_values[:] = np.NAN
+                    values.extend(haralick_values)
             features.append(values)
         return pd.DataFrame(features, columns=self.names, index=self.object_ids)
 
