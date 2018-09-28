@@ -435,8 +435,8 @@ class Texture(Features):
     '''
 
     def __init__(self, label_image, intensity_image,
-            theta_range=4, frequencies={1, 5, 10}, radius={1, 5, 10},
-            scales={1}, threshold=None, compute_haralick=False):
+            theta_range=4, frequencies=[1, 5, 10], radius=[1, 5, 10],
+            scales=[1], threshold=None, compute_haralick=False):
         '''
         Parameters
         ----------

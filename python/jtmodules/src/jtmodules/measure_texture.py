@@ -61,9 +61,9 @@ def main(extract_objects, assign_objects, intensity_image, aggregate,
     f = jtlib.features.Texture(
         label_image=extract_objects,
         intensity_image=intensity_image,
-        frequencies=set(frequencies),
-        radius=set(radii),
-        scales=set(scales),
+        frequencies=frequencies,
+        radius=radii,
+        scales=scales,
         compute_haralick=measure_haralick
     )
 
