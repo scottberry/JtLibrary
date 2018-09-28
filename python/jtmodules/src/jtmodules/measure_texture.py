@@ -16,7 +16,7 @@ import collections
 import jtlib.features
 
 
-VERSION = '0.2.0'
+VERSION = '0.3.0'
 
 Output = collections.namedtuple('Output', ['measurements', 'figure'])
 
