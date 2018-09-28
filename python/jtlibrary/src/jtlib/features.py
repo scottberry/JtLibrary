@@ -435,8 +435,9 @@ class Texture(Features):
     '''
 
     def __init__(self, label_image, intensity_image,
-            theta_range=4, frequencies=[1, 5, 10], radius=[1, 5, 10],
-            scales=[1], threshold=None, compute_haralick=False):
+                 theta_range=4, frequencies=[1, 5, 10], radius=[1, 5, 10],
+                 scales=[1], threshold=None, compute_haralick=False,
+                 compute_TAS=False, compute_LBP=False):
         '''
         Parameters
         ----------
@@ -448,16 +449,16 @@ class Texture(Features):
         theta_range: int, optional
             number of angles to define the orientations of the Gabor
             filters (default: ``4``)
-        frequencies: Set[int], optional
-            frequencies of the Gabor filters (default: ``{1, 5, 10}``)
-        scales: Set[int], optional
-            scales at which to compute the Haralick textures
+        frequencies: List[int], optional
+            frequencies of the Gabor filters (default: ``[1, 5, 10]``)
+        scales: List[int], optional
+            scales at which to compute the Haralick textures (default: ``[1]``)
         threshold: int, optional
             threshold value for Threshold Adjacency Statistics (TAS)
             (defaults to value computed by Otsu's method)
-        radius: Set[int], optional
+        radius: List[int], optional
             radius for defining pixel neighbourhood for Local Binary Patterns
-            (LBP) (default: ``{1, 5, 10}``)
+            (LBP) (default: ``[1, 5, 10]``)
         compute_haralick: bool, optional
             whether Haralick features should be computed
             (the computation is computationally expensive) (default: ``False``)
@@ -487,19 +488,23 @@ class Texture(Features):
                 'Elements of argument "scales" must have type int.'
             )
         self.compute_haralick = compute_haralick
+        self.compute_TAS = compute_TAS
+        self.compute_LBP = compute_LBP
 
     @property
     def _feature_names(self):
         names = ['Gabor-frequency-%d' % f for f in self.frequencies]
-        names.extend(['TAS-center-%d' % i for i in xrange(9)])
-        names.extend(['TAS-n-center-%d' % i for i in xrange(9)])
-        names.extend(['TAS-mu-margin-%d' % i for i in xrange(9)])
-        names.extend(['TAS-n-mu-margin-%d' % i for i in xrange(9)])
-        names.extend(['TAS-mu-%d' % i for i in xrange(9)])
-        names.extend(['TAS-n-mu-%d' % i for i in xrange(9)])
+        if self.compute_TAS:
+            names.extend(['TAS-center-%d' % i for i in xrange(9)])
+            names.extend(['TAS-n-center-%d' % i for i in xrange(9)])
+            names.extend(['TAS-mu-margin-%d' % i for i in xrange(9)])
+            names.extend(['TAS-n-mu-margin-%d' % i for i in xrange(9)])
+            names.extend(['TAS-mu-%d' % i for i in xrange(9)])
+            names.extend(['TAS-n-mu-%d' % i for i in xrange(9)])
         names.extend(['Hu-%d' % i for i in xrange(7)])
-        for r in self.radius:
-            names.extend(['LBP-radius-%d-%d' % (r, i) for i in xrange(36)])
+        if self.compute_LBP:
+            for r in self.radius:
+                names.extend(['LBP-radius-%d-%d' % (r, i) for i in xrange(36)])
         if self.compute_haralick:
             haralick_names = [
                 'Haralick-angular-second-moment',
@@ -532,7 +537,6 @@ class Texture(Features):
         '''
         # Create an empty dataset in case no objects were detected
         logger.info('extract texture features')
-        logger.info('hello')
         features = list()
         for obj in self.object_ids:
             mask = self.get_object_mask_image(obj)
@@ -557,22 +561,24 @@ class Texture(Features):
                     best_score = np.max([best_score, score])
                 values.append(best_score)
             # Threshold Adjacency Statistics
-            logger.debug('extract TAS features for object #%d', obj)
-            tas_values = mh.features.pftas(img, T=self._threshold)
-            values.extend(tas_values)
+            if self.compute_TAS:
+                logger.debug('extract TAS features for object #%d', obj)
+                tas_values = mh.features.pftas(img, T=self._threshold)
+                values.extend(tas_values)
             # Hu
             logger.debug('extract Hu moments for object #%d', obj)
             region = self.object_properties[obj]
             hu_values = region.weighted_moments_hu
             values.extend(hu_values)
             # Local Binary Pattern
-            logger.debug('extract Local Binary Patterns for object #%d', obj)
-            for r in self.radius:
-                # We may want to use more points, but the number of features
-                # increases exponentially with the number of neighbourhood
-                # points.
-                vals = mh.features.lbp(img, radius=r, points=8)
-                values.extend(vals)
+            if self.compute_LBP:
+                logger.debug('extract Local Binary Patterns for object #%d', obj)
+                for r in self.radius:
+                    # We may want to use more points, but the number of features
+                    # increases exponentially with the number of neighbourhood
+                    # points.
+                    vals = mh.features.lbp(img, radius=r, points=8)
+                    values.extend(vals)
             if self.compute_haralick:
                 # Haralick
                 for scale in self.scales:
