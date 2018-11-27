@@ -20,10 +20,10 @@ from jtlib.filter import log_2d, log_3d
 
 logger = logging.getLogger(__name__)
 
-VERSION = '0.4.0'
+VERSION = '0.5.0'
 
 Output = collections.namedtuple(
-    'Output', ['volume_image', 'smoothed_surface_image', 'figure']
+    'Output', ['volume_image', 'smoothed_surface_image', 'bead_coordinate_image', 'slide_surface_image', 'figure']
 )
 Beads = collections.namedtuple('Beads', ['coordinates', 'coordinate_image'])
 
@@ -250,10 +250,17 @@ def filter_vertices_per_cell_alpha_shape(coord_image_abs, mask, alpha, z_step, p
             filtered_coords = [(x, y, abs_to_z_steps(z)) for (x, y, z) in filtered_coords]
 
             # transform to global coords and add border coordinates
+            n_border_coordinates = 100
             try:
-                s = random.sample(set(border_isolated_coords_zeroed), 100)
+                s = random.sample(set(border_isolated_coords_zeroed), n_border_coordinates)
             except ValueError:
                 s = set(border_isolated_coords_zeroed)
+
+            logger.debug(
+                '%d bead vertices inside cell, adding %d border coordinates',
+                len(filtered_coords),
+                len(s),
+            )
 
             filtered_coords_global += [(t[0] + x_min, t[1] + y_min, t[2]) for t in set(filtered_coords).union(s)]
 
@@ -430,12 +437,8 @@ def main(image, mask, threshold=25,
         )
 
         logger.debug('mask beads inside cells')
-        '''NOTE: localised_beads.coordinate image is used only for beads
-        outside cells and can therefore be modified here. For beads
-        inside cells, localised_beads.coordinates are used instead.
-        '''
         # expand mask to ensure slide-beads are well away from cells
-        slide = localised_beads.coordinate_image
+        slide = np.copy(localised_beads.coordinate_image)
         expand_mask = mh.dilate(
             A=mask > 0,
             Bc=np.ones([25,25], bool)
@@ -451,7 +454,7 @@ def main(image, mask, threshold=25,
             volume_image = np.zeros(shape=image[:,:,0].shape,
                                     dtype=image.dtype)
             figure = str()
-            return Output(volume_image, volume_image, figure)
+            return Output(volume_image, volume_image, volume_image, volume_image, figure)
 
         logger.debug('subtract slide surface to get absolute bead coordinates')
         bead_coords_abs = []
@@ -521,14 +524,15 @@ def main(image, mask, threshold=25,
         volume_image = np.zeros(shape=image[:,:,0].shape, dtype=image.dtype)
         smoothed_surface_image = volume_image
 
+    logger.debug('convert bottom surface plane to image')
+    dt = np.dtype(float)
+    bottom_surface_image = np.zeros(slide.shape, dtype=dt)
+    for ix in range(slide.shape[0]):
+        for iy in range(slide.shape[1]):
+            bottom_surface_image[ix, iy] = plane(
+                ix, iy, bottom_surface.x)
+
     if (plot and volume_image_calculated):
-        logger.debug('convert bottom surface plane to image for plotting')
-        dt = np.dtype(float)
-        bottom_surface_image = np.zeros(slide.shape, dtype=dt)
-        for ix in range(slide.shape[0]):
-            for iy in range(slide.shape[1]):
-                bottom_surface_image[ix, iy] = plane(
-                    ix, iy, bottom_surface.x)
         logger.info('create plot')
         from jtlib import plotting
         plots = [
@@ -552,4 +556,11 @@ def main(image, mask, threshold=25,
     else:
         figure = str()
 
-    return Output(volume_image, smoothed_surface_image, figure)
+    bottom_surface_image[bottom_surface_image < 0] = 0
+    bottom_surface_image = np.floor(bottom_surface_image).astype(np.uint16)
+
+    return Output(volume_image,
+                  smoothed_surface_image,
+                  localised_beads.coordinate_image.astype(np.uint16),
+                  bottom_surface_image,
+                  figure)

@@ -1,5 +1,5 @@
 ---
-version: 0.4.0
+version: 0.5.0
 
 input:
 
@@ -94,6 +94,18 @@ output:
     help: >
       The same as the volume image, except smoothed for surface area
       calculations.
+
+  - name: bead_coordinate_image
+    type: IntensityImage
+    key: generate_volume_image.bead_coordinate_image
+    help: >
+      Absolute coordinates for all detected beads (before vertex filtering)
+
+  - name: slide_surface_image
+    type: IntensityImage
+    key: generate_volume_image.slide_surface_image
+    help: >
+      Intensity image representing the inferred slide surface
 
   - name: figure
     type: Figure
