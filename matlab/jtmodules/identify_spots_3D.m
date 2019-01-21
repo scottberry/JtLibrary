@@ -162,9 +162,10 @@ classdef identify_spots_3D
                 if isempty(Centroid)   % keep the resettign to 0 0 found in other modules to remain consistent
                     Centroid = [0 0];
                 end
+                occupancy_image = uint16(cpsub.coordinates_to_occupancy_image(Centroid, size(image(:,:,1))));
+            else
+                occupancy_image = uint16(zeros(size(image(:,:,1))));
             end
-
-            occupancy_image = uint16(cpsub.coordinates_to_occupancy_image(Centroid, size(image(:,:,1))));
 
             if plot
                 % make a projection of the image into 2D to plot
