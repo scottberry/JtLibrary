@@ -418,7 +418,7 @@ def main(image, mask, threshold=25,
 
         logger.debug('threshold beads')
         labeled_beads, n_labels = mh.label(detect_image > threshold)
-        logger.info('detected %d beads', n_labels)
+        logger.debug('detected %d beads', n_labels)
 
         logger.debug('remove small beads')
         sizes = mh.labeled.labeled_size(labeled_beads)
@@ -516,6 +516,14 @@ def main(image, mask, threshold=25,
                 shape=image[:,:,0].shape, dtype=image.dtype
             )
 
+        logger.debug('convert bottom surface plane to image')
+        dt = np.dtype(float)
+        bottom_surface_image = np.zeros(slide.shape, dtype=dt)
+        for ix in range(slide.shape[0]):
+            for iy in range(slide.shape[1]):
+                bottom_surface_image[ix, iy] = plane(
+                    ix, iy, bottom_surface.x)
+
     else:
         logger.warn(
             'no objects in input mask, skipping cell volume calculation.'
@@ -523,14 +531,8 @@ def main(image, mask, threshold=25,
         volume_image_calculated = False
         volume_image = np.zeros(shape=image[:,:,0].shape, dtype=image.dtype)
         smoothed_surface_image = volume_image
-
-    logger.debug('convert bottom surface plane to image')
-    dt = np.dtype(float)
-    bottom_surface_image = np.zeros(slide.shape, dtype=dt)
-    for ix in range(slide.shape[0]):
-        for iy in range(slide.shape[1]):
-            bottom_surface_image[ix, iy] = plane(
-                ix, iy, bottom_surface.x)
+        bottom_surface_image = volume_image
+        localised_beads = Beads([],volume_image)
 
     if (plot and volume_image_calculated):
         logger.info('create plot')
@@ -556,8 +558,9 @@ def main(image, mask, threshold=25,
     else:
         figure = str()
 
-    bottom_surface_image[bottom_surface_image < 0] = 0
-    bottom_surface_image = np.floor(bottom_surface_image).astype(np.uint16)
+    if (volume_image_calculated):
+        bottom_surface_image[bottom_surface_image < 0] = 0
+        bottom_surface_image = np.floor(bottom_surface_image).astype(np.uint16)
 
     return Output(volume_image,
                   smoothed_surface_image,
