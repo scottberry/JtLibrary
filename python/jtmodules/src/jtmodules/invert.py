@@ -63,10 +63,10 @@ def main(image, plot=False):
         else:
             data = [
                 plotting.create_mask_image_plot(
-                    image, 'ul', clip=True,
+                    image, 'ul',
                 ),
                 plotting.create_mask_image_plot(
-                    inverted_image, 'ur', clip=True,
+                    inverted_image, 'ur',
                 ),
             ]
         figure = plotting.create_figure(
