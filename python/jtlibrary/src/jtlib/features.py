@@ -358,8 +358,12 @@ class Morphology(Features):
     @property
     def _feature_names(self):
         names = [
-            'Local_Centroid_x', 'Local_Centroid_y', 'Area', 'Eccentricity', 'Convexity', 'Circularity', 'Perimeter',
-            'Elongation'
+            'Local_Centroid_x', 'Local_Centroid_y',
+            'Area', 'Perimeter', 'Eccentricity', 'Extent',
+            'Euler_Number','Convexity', 'Circularity', 'Roundness',
+            'Elongation','Equivalent_Diameter',
+            'Major_Axis_Length','Minor_Axis_Length',
+            'Maximum_Radius','Mean_Radius'
         ]
         if self.compute_zernike:
             for n in xrange(self._degree+1):
@@ -378,29 +382,59 @@ class Morphology(Features):
         '''
         logger.info('extract morphology features')
         features = list()
-        cm = mh.center_of_mass(img=self.label_image > 0,labels=self.label_image)
+        cm = mh.center_of_mass(
+            img=self.label_image > 0,
+            labels=self.label_image)
+        distances = mh.distance(self.label_image)
+        regionprops = measure.regionprops(
+            label_image=self.label_image,
+            intensity_image=distances)
         for obj in self.object_ids:
             mask = self.get_object_mask_image(obj)
+            roundness = mh.features.roundness(mask)
+
+            # skimage ignores label = 0 and starts list of objects at n=1
+            sk_obj = obj - 1
+
+            # calculate centroid, area and perimeter for selected object
             local_centroid_x = cm[obj][1]
             local_centroid_y = cm[obj][0]
-            area = np.float64(np.count_nonzero(mask))
-            perimeter = mh.labeled.perimeter(mask)
+            area = regionprops[sk_obj].area
+            perimeter = regionprops[sk_obj].perimeter
+            extent = regionprops[sk_obj].extent
+            euler_number = regionprops[sk_obj].euler_number
+
+            # calculate circularity (a.k.a. form factor)
             if perimeter == 0:
                 circularity = np.nan
             else:
                 circularity = (4.0 * np.pi * area) / (perimeter**2)
-            convex_hull = mh.polygon.fill_convexhull(mask)
-            area_convex_hull = np.count_nonzero(convex_hull)
+
+            # calculate convexity (a.k.a solidity)
+            area_convex_hull = regionprops[sk_obj].convex_area
             convexity = area / area_convex_hull
-            eccentricity = mh.features.eccentricity(mask)
-            major_axis, minor_axis = mh.features.ellipse_axes(mask)
+
+            # calculate ellipse features
+            eccentricity = regionprops[sk_obj].eccentricity
+            equivalent_diameter = regionprops[sk_obj].equivalent_diameter
+            major_axis = regionprops[sk_obj].major_axis_length
+            minor_axis = regionprops[sk_obj].minor_axis_length
             if major_axis == 0:
                 elongation = np.nan
             else:
                 elongation = (major_axis - minor_axis) / major_axis
+
+            # calculate "distance" features
+            max_radius = regionprops[sk_obj].max_intensity
+            mean_radius = regionprops[sk_obj].mean_intensity
+
             values = [
-                local_centroid_x, local_centroid_y, area, eccentricity, convexity, circularity, perimeter,
-                elongation
+                local_centroid_x, local_centroid_y,
+                area, perimeter, eccentricity, extent,
+                euler_number, convexity, circularity, roundness,
+                elongation, equivalent_diameter,
+                major_axis, minor_axis,
+                max_radius, mean_radius
             ]
             if self.compute_zernike:
                 logger.debug('extract Zernike moments for object #%d', obj)
