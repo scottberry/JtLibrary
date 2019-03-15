@@ -382,9 +382,6 @@ class Morphology(Features):
         '''
         logger.info('extract morphology features')
         features = list()
-        cm = mh.center_of_mass(
-            img=self.label_image > 0,
-            labels=self.label_image)
         distances = ndi.morphology.distance_transform_edt(self.label_image)
         regionprops = measure.regionprops(
             label_image=self.label_image,
