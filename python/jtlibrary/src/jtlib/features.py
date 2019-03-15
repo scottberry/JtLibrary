@@ -360,7 +360,7 @@ class Morphology(Features):
         names = [
             'Local_Centroid_x', 'Local_Centroid_y',
             'Area', 'Perimeter', 'Eccentricity', 'Extent',
-            'Euler_Number','Convexity', 'Circularity', 'Roundness',
+            'Convexity', 'Circularity', 'Roundness',
             'Elongation','Equivalent_Diameter',
             'Major_Axis_Length','Minor_Axis_Length',
             'Maximum_Radius','Mean_Radius'
@@ -385,7 +385,7 @@ class Morphology(Features):
         cm = mh.center_of_mass(
             img=self.label_image > 0,
             labels=self.label_image)
-        distances = mh.distance(self.label_image)
+        distances = ndi.morphology.distance_transform_edt(self.label_image)
         regionprops = measure.regionprops(
             label_image=self.label_image,
             intensity_image=distances)
@@ -397,12 +397,11 @@ class Morphology(Features):
             sk_obj = obj - 1
 
             # calculate centroid, area and perimeter for selected object
-            local_centroid_x = cm[obj][1]
-            local_centroid_y = cm[obj][0]
+            local_centroid_x = regionprops[sk_obj].centroid[1]
+            local_centroid_y = regionprops[sk_obj].centroid[0]
             area = regionprops[sk_obj].area
             perimeter = regionprops[sk_obj].perimeter
             extent = regionprops[sk_obj].extent
-            euler_number = regionprops[sk_obj].euler_number
 
             # calculate circularity (a.k.a. form factor)
             if perimeter == 0:
@@ -412,7 +411,7 @@ class Morphology(Features):
 
             # calculate convexity (a.k.a solidity)
             area_convex_hull = regionprops[sk_obj].convex_area
-            convexity = area / area_convex_hull
+            convexity = area / float(area_convex_hull)
 
             # calculate ellipse features
             eccentricity = regionprops[sk_obj].eccentricity
@@ -431,7 +430,7 @@ class Morphology(Features):
             values = [
                 local_centroid_x, local_centroid_y,
                 area, perimeter, eccentricity, extent,
-                euler_number, convexity, circularity, roundness,
+                convexity, circularity, roundness,
                 elongation, equivalent_diameter,
                 major_axis, minor_axis,
                 max_radius, mean_radius
