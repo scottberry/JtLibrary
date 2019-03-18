@@ -53,8 +53,9 @@ class Neighbours(jtlib.features.Features):
 
         Returns
         -------
-        numpy.ndarray[bool]
-            mask image for given object
+        numpy.ndarray[int32]
+            label image for given object including surrounding objects
+            of the same type
         '''
         bbox = self._bboxes[object_id]
         ymin = bbox[0] - pad if bbox[0] - pad > 0 else 0
@@ -134,9 +135,9 @@ def main(extract_objects, assign_objects, neighbour_distance, touching_distance,
     assign_objects: nu0mpy.ndarray[int32]
         label image with objects to which extracted features should be assigned
     neighbour_distance: integer
-        distance in pixels that an object should be considered to be a neighbour
+        distance in pixels between objects to be considered "neighbours"
     touching_distance: integer
-        distance in pixels that an object should be considered touching
+        distance in pixels between objects to be considered "touching"
 
     Returns
     -------
