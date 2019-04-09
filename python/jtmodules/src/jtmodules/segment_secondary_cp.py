@@ -9,12 +9,12 @@ import skimage.morphology
 
 logger = logging.getLogger(__name__)
 
-VERSION = '0.0.3'
-M_PROPAGATION = "Propagation"
-M_WATERSHED_G = "Watershed - Gradient"
-M_WATERSHED_I = "Watershed - Image"
-M_DISTANCE_N = "Distance - N"
-M_DISTANCE_B = "Distance - B"
+VERSION = '0.0.1'
+M_PROPAGATION = "propagation"
+M_WATERSHED_G = "watershed_gradient"
+M_WATERSHED_I = "watershed_image"
+M_DISTANCE_N = "distance_n"
+M_DISTANCE_B = "distance_b"
 
 Output = collections.namedtuple('Output', ['secondary_label_image', 'figure'])
 
@@ -43,7 +43,7 @@ def main(primary_label_image, intensity_image, method, threshold=None,
             # convert intensity image to float64
             if intensity_image.dtype == np.uint8:
                 img = np.float64(intensity_image) / 255
-            else if intensity_image.dtype == np.uint16:
+            elif intensity_image.dtype == np.uint16:
                 img = np.float64(intensity_image) / 65535
 
             # threshold intensity image
@@ -98,15 +98,15 @@ def main(primary_label_image, intensity_image, method, threshold=None,
                     mask=watershed_mask
                 )
 
-            if self.fill_holes:
+            if fill_holes:
                 secondary_label_image = centrosome.cpmorphology.fill_labeled_holes(labels_out)
             else:
                 secondary_label_image = labels_out
 
-        # re-implement this
-        #        secondary_label_image = self.filter_labels(secondary_label_image,
-        #                                       objects, workspace)
-        secondary_label_image = secondary_label_image.astype(np.int32)
+            # re-implement this
+            #        secondary_label_image = self.filter_labels(secondary_label_image,
+            #                                       objects, workspace)
+            secondary_label_image = secondary_label_image.astype(np.int32)
 
         else:
             logger.info('skipping secondary segmentation')
