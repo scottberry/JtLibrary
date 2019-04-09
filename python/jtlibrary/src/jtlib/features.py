@@ -1,4 +1,4 @@
-# Copyright 2016 Markus D. Herrmann, University of Zurich
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,12 +21,11 @@ from abc import abstractproperty
 from abc import abstractmethod
 from cached_property import cached_property
 from skimage import measure
-from skimage import filters
 from scipy import ndimage as ndi
 # from mahotas.features import surf
-from scipy.spatial.distance import squareform, cdist
 from centrosome.filter import gabor
 from jtlib import utils
+from tmlib.errors import PipelineRunError
 
 
 logger = logging.getLogger(__name__)
@@ -59,13 +58,19 @@ class Features(object):
         TypeError
             when `intensity_image` doesn't have unsigned integer type
         ValueError
-            when `intensity_image` and `label_image` don't have identical shape
-            or when `label_image` is not 2D
+            when `intensity_image` and `label_image` don't have identical shape,
+             when `label_image` is not 2D, or when labels in `label_image` are
+            not consecutive
         '''
         self.label_image = label_image
         if len(label_image.shape) > 2:
             raise ValueError(
                 'Feature extraction is only implemented for 2D images.'
+            )
+        if len(set(np.unique(self.label_image)) - {0}) != np.max(self.label_image):
+            raise ValueError(
+                'Label image contains non-consecutive labels.'
+                ' Consider re-labelling.'
             )
         self.intensity_image = intensity_image
         if self.intensity_image is not None:
@@ -76,8 +81,10 @@ class Features(object):
                 )
             if self.label_image.shape != self.intensity_image.shape:
                 raise ValueError(
-                    'Images "label_image" and "intensity_image" must have '
-                    'the same dimensions.'
+                    'Images "label_image" and "intensity_image" must have'
+                    ' the same dimensions, but "label_image" has shape %r'
+                    ' and "intensity_image" has shape %r.'
+                    % (self.label_image.shape, self.intensity_image.shape)
                 )
 
     @cached_property
@@ -132,7 +139,10 @@ class Features(object):
                 'Image "ref_label_image" has incorrect dimensions.'
             )
         if not aggregate:
-            if np.any((self.label_image - ref_label_image) > 0):
+            # If labels match, and objects are one-to-one, then label_minus_ref
+            # should contain only zeros where label_image is non-zero.
+            label_minus_ref = self.label_image - ref_label_image
+            if np.any(label_minus_ref[self.label_image > 0] != 0):
                 raise ValueError(
                     'Should this be an aggregate measurement?'
                     'Some assigned objects contain more than one of the objects'
@@ -386,19 +396,44 @@ class Morphology(Features):
         regionprops = measure.regionprops(
             label_image=self.label_image,
             intensity_image=distances)
-        for obj in self.object_ids:
+        for obj_index, obj in enumerate(self.object_ids):
             mask = self.get_object_mask_image(obj)
             roundness = mh.features.roundness(mask)
 
-            # skimage ignores label = 0 and starts list of objects at n=1
-            sk_obj = obj - 1
+            # skimage.measure.regionprops returns a list which is indexed
+            # as [0,len(self.object_ids)-1] rather than by the labels in
+            # self.label_image. If labels are not consecutive, this can
+            # cause problems. We therefore access these by obj_index
+            # instead of obj and then check that the labels match.
+            try:
+                obj_props = regionprops[obj_index]
+                if (obj_props.label != obj):
+                    logger.error(
+                        "Measurements of object #%d should not be assigned"
+                        "to object #%d", obj_props.label, obj)
+                    raise PipelineRunError
+            except IndexError:
+                logger.error(
+                    "No properties computed for object with label %s"
+                    " -- using `NaN` for all columns", obj)
+                # use NaN's for all the feature values
+                features.append([np.NaN for _ in self.names])
+                continue
 
             # calculate centroid, area and perimeter for selected object
-            local_centroid_x = regionprops[sk_obj].centroid[1]
-            local_centroid_y = regionprops[sk_obj].centroid[0]
-            area = regionprops[sk_obj].area
-            perimeter = regionprops[sk_obj].perimeter
-            extent = regionprops[sk_obj].extent
+            if 'centroid' in obj_props:  # skimage < 0.16
+                local_centroid_x, local_centroid_y = obj_props.centroid
+            elif 'centroidarray' in obj_props:  # skimage >= 0.16
+                local_centroid_x, local_centroid_y = obj_props.centroidarray
+            else:
+                logger.error(
+                    "No centroid coordinates computed for object with label %s"
+                    " -- using `NaN` instead!", obj)
+                local_centroid_x = np.NaN
+                local_centroid_y = np.NaN
+            area = obj_props.area
+            perimeter = obj_props.perimeter
+            extent = obj_props.extent
 
             # calculate circularity (a.k.a. form factor)
             if perimeter == 0:
@@ -407,22 +442,22 @@ class Morphology(Features):
                 circularity = (4.0 * np.pi * area) / (perimeter**2)
 
             # calculate convexity (a.k.a solidity)
-            area_convex_hull = regionprops[sk_obj].convex_area
+            area_convex_hull = obj_props.convex_area
             convexity = area / float(area_convex_hull)
 
             # calculate ellipse features
-            eccentricity = regionprops[sk_obj].eccentricity
-            equivalent_diameter = regionprops[sk_obj].equivalent_diameter
-            major_axis = regionprops[sk_obj].major_axis_length
-            minor_axis = regionprops[sk_obj].minor_axis_length
+            eccentricity = obj_props.eccentricity
+            equivalent_diameter = obj_props.equivalent_diameter
+            major_axis = obj_props.major_axis_length
+            minor_axis = obj_props.minor_axis_length
             if major_axis == 0:
                 elongation = np.nan
             else:
                 elongation = (major_axis - minor_axis) / major_axis
 
             # calculate "distance" features
-            max_radius = regionprops[sk_obj].max_intensity
-            mean_radius = regionprops[sk_obj].mean_intensity
+            max_radius = obj_props.max_intensity
+            mean_radius = obj_props.mean_intensity
 
             values = [
                 local_centroid_x, local_centroid_y,
@@ -468,8 +503,8 @@ class Texture(Features):
     '''
 
     def __init__(self, label_image, intensity_image,
-                 theta_range=4, frequencies=[1, 5, 10], radius=[1, 5, 10],
-                 scales=[1], threshold=None, compute_haralick=False,
+                 theta_range=4, frequencies={1, 5, 10}, radius={1, 5, 10},
+                 scales={1}, threshold=None, compute_haralick=False,
                  compute_TAS=False, compute_LBP=False):
         '''
         Parameters
@@ -482,16 +517,16 @@ class Texture(Features):
         theta_range: int, optional
             number of angles to define the orientations of the Gabor
             filters (default: ``4``)
-        frequencies: List[int], optional
-            frequencies of the Gabor filters (default: ``[1, 5, 10]``)
-        scales: List[int], optional
-            scales at which to compute the Haralick textures (default: ``[1]``)
+        frequencies: Set[int], optional
+            frequencies of the Gabor filters (default: ``{1, 5, 10}``)
+        scales: Set[int], optional
+            scales at which to compute the Haralick textures (default: ``{1}``)
         threshold: int, optional
             threshold value for Threshold Adjacency Statistics (TAS)
             (defaults to value computed by Otsu's method)
-        radius: List[int], optional
+        radius: Set[int], optional
             radius for defining pixel neighbourhood for Local Binary Patterns
-            (LBP) (default: ``[1, 5, 10]``)
+            (LBP) (default: ``{1, 5, 10}``)
         compute_haralick: bool, optional
             whether Haralick features should be computed
             (the computation is computationally expensive) (default: ``False``)
@@ -516,7 +551,7 @@ class Texture(Features):
             raise TypeError(
                 'Elements of argument "frequencies" must have type int.'
             )
-        if not all([isinstance(f, int) for s in self.scales]):
+        if not all([isinstance(s, int) for s in self.scales]):
             raise TypeError(
                 'Elements of argument "scales" must have type int.'
             )
@@ -528,34 +563,41 @@ class Texture(Features):
     def _feature_names(self):
         names = ['Gabor-frequency-%d' % f for f in self.frequencies]
         if self.compute_TAS:
-            names.extend(['TAS-center-%d' % i for i in xrange(9)])
-            names.extend(['TAS-n-center-%d' % i for i in xrange(9)])
-            names.extend(['TAS-mu-margin-%d' % i for i in xrange(9)])
-            names.extend(['TAS-n-mu-margin-%d' % i for i in xrange(9)])
-            names.extend(['TAS-mu-%d' % i for i in xrange(9)])
-            names.extend(['TAS-n-mu-%d' % i for i in xrange(9)])
-        names.extend(['Hu-%d' % i for i in xrange(7)])
+            for i in xrange(9):
+                for name in [
+                        'center',
+                        'n-center',
+                        'mu-margin',
+                        'n-mu-margin',
+                        'mu',
+                        'n-mu',
+                ]:
+                    names.append('TAS-{name}-{i:d}'.format(name=name, i=i))
+        names.extend('Hu-%d' % i
+                     for i in xrange(7))
         if self.compute_LBP:
             for r in self.radius:
-                names.extend(['LBP-radius-%d-%d' % (r, i) for i in xrange(36)])
+                names.extend('LBP-radius-%d-%d' % (r, i)
+                             for i in xrange(36))
         if self.compute_haralick:
-            haralick_names = [
-                'Haralick-angular-second-moment',
-                'Haralick-contrast',
-                'Haralick-correlation',
-                'Haralick-sum-of-squares',
-                'Haralick-inverse-diff-moment',
-                'Haralick-sum-avg',
-                'Haralick-sum-var',
-                'Haralick-sum-entropy',
-                'Haralick-entropy',
-                'Haralick-diff-var',
-                'Haralick-diff-entropy',
-                'Haralick-info-measure-corr-1',
-                'Haralick-info-measure-corr-2'
-            ]
-            for s in self.scales:
-                names.extend([h + "-" + str(s) for h in haralick_names])
+            for name in [
+                    'angular-second-moment',
+                    'contrast',
+                    'correlation',
+                    'sum-of-squares',
+                    'inverse-diff-moment',
+                    'sum-avg',
+                    'sum-var',
+                    'sum-entropy',
+                    'entropy',
+                    'diff-var',
+                    'diff-entropy',
+                    'info-measure-corr-1',
+                    'info-measure-corr-2'
+            ]:
+                for scale in self.scales:
+                    names.append("Haralick-{name}-{scale}"
+                                 .format(name=name, scale=scale))
         return names
 
     def extract(self):
@@ -627,13 +669,13 @@ class Texture(Features):
                             distance=scale
                         )
                     except ValueError:
-                        haralick_values[:] = np.NAN
+                        # FIXME: hard-coded size!
+                        haralick_values = np.full(13, np.NaN, dtype=float)
 
                     if not isinstance(haralick_values, np.ndarray):
                         # NOTE: setting `ignore_zeros` to True creates problems for some
                         # objects, when all values of the adjacency matrices are zeros
-                        haralick_values = np.empty((len(self.names), ), dtype=float)
-                        haralick_values[:] = np.NAN
+                        haralick_values = np.full(len(self.names), np.NaN, dtype=float)
                     values.extend(haralick_values)
             features.append(values)
         return pd.DataFrame(features, columns=self.names, index=self.object_ids)
