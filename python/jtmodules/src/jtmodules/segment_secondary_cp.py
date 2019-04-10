@@ -1,4 +1,66 @@
-# coding=utf-8
+# Copyright (C) 2016 University of Zurich.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Adapted from CellProfiler3, code at https://github.com/CellProfiler/
+# CellProfiler/blob/master/cellprofiler/modules/identifysecondaryobjects.py
+# which is governed by the BSD 3-Clause License
+
+# The BSD 3-Clause License
+#
+# Copyright (C) 2003 - 2019 Broad Institute, Inc. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#     1.  Redistributions of source code must retain the above copyright notice,
+#         this list of conditions and the following disclaimer.
+#
+#     2.  Redistributions in binary form must reproduce the above copyright
+#         notice, this list of conditions and the following disclaimer in the
+#         documentation and/or other materials provided with the distribution.
+#
+#     3.  Neither the name of the Broad Institute, Inc. nor the names of its
+#         contributors may be used to endorse or promote products derived from
+#         this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED “AS IS.”  BROAD MAKES NO EXPRESS OR IMPLIED
+# REPRESENTATIONS OR WARRANTIES OF ANY KIND REGARDING THE SOFTWARE AND
+# COPYRIGHT, INCLUDING, BUT NOT LIMITED TO, WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE, CONFORMITY WITH ANY DOCUMENTATION,
+# NON-INFRINGEMENT, OR THE ABSENCE OF LATENT OR OTHER DEFECTS, WHETHER OR NOT
+# DISCOVERABLE. IN NO EVENT SHALL BROAD, THE COPYRIGHT HOLDERS, OR CONTRIBUTORS
+# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO PROCUREMENT OF SUBSTITUTE
+# GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+# OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF, HAVE REASON TO KNOW, OR IN
+# FACT SHALL KNOW OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# If, by operation of law or otherwise, any of the aforementioned warranty
+# disclaimers are determined inapplicable, your sole remedy, regardless of the
+# form of action, including, but not limited to, negligence and strict
+# liability, shall be replacement of the software with an updated version if one
+# exists.
+#
+# Development of CellProfiler has been funded in whole or in part with federal
+# funds from the National Institutes of Health, the National Science Foundation,
+# and the Human Frontier Science Program.
+
+'''Jterator module for segmentation of secondary objects around existing
+primary objects.
+'''
 
 import logging
 import numpy as np
@@ -86,20 +148,22 @@ def main(primary_label_image, intensity_image, method, threshold,
     Note
     ----
 
+    Original text from CellProfiler module:
+
     There are several methods available to find the dividing lines between
     secondary objects that touch each other:
-    -  *propagation:* This method will find dividing lines between
+    -  propagation: This method will find dividing lines between
        clumped objects where the image stained for secondary objects shows a
        change in staining (i.e., either a dimmer or a brighter line).
        Smoother lines work better, but unlike the Watershed method, small
        gaps are tolerated. This method is considered an improvement on the
-       traditional *Watershed* method. The dividing lines between objects
+       traditional Watershed method. The dividing lines between objects
        are determined by a combination of the distance to the nearest
        primary object and intensity gradients. This algorithm uses local
        image similarity to guide the location of boundaries between cells.
        Boundaries are preferentially placed where the image’s local
-       appearance changes perpendicularly to the boundary (*Jones et al,
-       2005*).
+       appearance changes perpendicularly to the boundary (Jones et al,
+       2005).
        The propagation algorithm is the default approach for secondary object
        creation. Each primary object is a "seed" for its corresponding
        secondary object, guided by the input
@@ -109,30 +173,30 @@ def main(primary_label_image, intensity_image, method, threshold,
        by the shortest path to an adjacent primary object from the starting
        (“seeding”) primary object. The seed-to-pixel distances are calculated
        as the sum of absolute differences in a 3x3 (8-connected) image
-       neighborhood, combined with lambda via sqrt(differences**2 +
-       lambda**2).
-    -  *watershed_gradient:* This method uses the watershed algorithm
-       (*Vincent and Soille, 1991*) to assign pixels to the primary objects
+       neighborhood, combined with lambda via sqrt(differences^2 +
+       lambda^2).
+    -  watershed_gradient: This method uses the watershed algorithm
+       (Vincent and Soille, 1991) to assign pixels to the primary objects
        which act as seeds for the watershed. In this variant, the watershed
        algorithm operates on the Sobel transformed image which computes an
        intensity gradient. This method works best when the image intensity
        drops off or increases rapidly near the boundary between cells.
-    -  *watershed_image:* This method is similar to the above, but it
+    -  watershed_image: This method is similar to the above, but it
        uses the inverted intensity of the image for the watershed. The areas
        of lowest intensity will be detected as the boundaries between cells.
        This method works best when there is a saddle of relatively low
        intensity at the cell-cell boundary.
-    -  *Distance:* In this method, the edges of the primary objects are
+    -  Distance: In this method, the edges of the primary objects are
        expanded a specified distance to create the secondary objects. For
        example, if nuclei are labeled but there is no stain to help locate
        cell edges, the nuclei can simply be expanded in order to estimate
        the cell’s location. This is often called the “doughnut” or “annulus”
        or “ring” approach for identifying the cytoplasm. There are two
        methods that can be used:
-       -  *distance_n*: In this method, the image of the secondary
+       -  distance_n: In this method, the image of the secondary
           staining is not used at all; the expanded objects are the final
           secondary objects.
-       -  *distance_b*: Thresholding of the secondary staining image
+       -  distance_b: Thresholding of the secondary staining image
           is used to eliminate background regions from the secondary
           objects. This allows the extent of the secondary objects to be
           limited to a certain distance away from the edge of the primary
@@ -140,11 +204,11 @@ def main(primary_label_image, intensity_image, method, threshold,
     References
     ^^^^^^^^^^
     Jones TR, Carpenter AE, Golland P (2005) “Voronoi-Based Segmentation of
-    Cells on Image Manifolds”, *ICCV Workshop on Computer Vision for
-    Biomedical Image Applications*, 535-543.
+    Cells on Image Manifolds”, ICCV Workshop on Computer Vision for
+    Biomedical Image Applications, 535-543.
     Vincent L, Soille P (1991) "Watersheds in Digital Spaces: An Efficient
-    Algorithm Based on Immersion Simulations", *IEEE Transactions on Pattern
-    Analysis and Machine Intelligence*, Vol. 13, No. 6, 583-598
+    Algorithm Based on Immersion Simulations", IEEE Transactions on Pattern
+    Analysis and Machine Intelligence, Vol. 13, No. 6, 583-598
     '''
 
     if not np.any(primary_label_image == 0):
