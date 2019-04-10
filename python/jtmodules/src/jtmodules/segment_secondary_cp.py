@@ -34,7 +34,7 @@
 #         contributors may be used to endorse or promote products derived from
 #         this software without specific prior written permission.
 #
-# THIS SOFTWARE IS PROVIDED “AS IS.”  BROAD MAKES NO EXPRESS OR IMPLIED
+# THIS SOFTWARE IS PROVIDED "AS IS."  BROAD MAKES NO EXPRESS OR IMPLIED
 # REPRESENTATIONS OR WARRANTIES OF ANY KIND REGARDING THE SOFTWARE AND
 # COPYRIGHT, INCLUDING, BUT NOT LIMITED TO, WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE, CONFORMITY WITH ANY DOCUMENTATION,
@@ -161,7 +161,7 @@ def main(primary_label_image, intensity_image, method, threshold,
        are determined by a combination of the distance to the nearest
        primary object and intensity gradients. This algorithm uses local
        image similarity to guide the location of boundaries between cells.
-       Boundaries are preferentially placed where the image’s local
+       Boundaries are preferentially placed where the image's local
        appearance changes perpendicularly to the boundary (Jones et al,
        2005).
        The propagation algorithm is the default approach for secondary object
@@ -171,7 +171,7 @@ def main(primary_label_image, intensity_image, method, threshold,
        thresholding method. lambda is a regularization parameter; see the help for
        the setting for more details. Propagation of secondary object labels is
        by the shortest path to an adjacent primary object from the starting
-       (“seeding”) primary object. The seed-to-pixel distances are calculated
+       ("seeding") primary object. The seed-to-pixel distances are calculated
        as the sum of absolute differences in a 3x3 (8-connected) image
        neighborhood, combined with lambda via sqrt(differences^2 +
        lambda^2).
@@ -190,8 +190,8 @@ def main(primary_label_image, intensity_image, method, threshold,
        expanded a specified distance to create the secondary objects. For
        example, if nuclei are labeled but there is no stain to help locate
        cell edges, the nuclei can simply be expanded in order to estimate
-       the cell’s location. This is often called the “doughnut” or “annulus”
-       or “ring” approach for identifying the cytoplasm. There are two
+       the cell's location. This is often called the "doughnut" or "annulus"
+       or "ring" approach for identifying the cytoplasm. There are two
        methods that can be used:
        -  distance_n: In this method, the image of the secondary
           staining is not used at all; the expanded objects are the final
@@ -203,8 +203,8 @@ def main(primary_label_image, intensity_image, method, threshold,
           objects without including regions of background.
     References
     ^^^^^^^^^^
-    Jones TR, Carpenter AE, Golland P (2005) “Voronoi-Based Segmentation of
-    Cells on Image Manifolds”, ICCV Workshop on Computer Vision for
+    Jones TR, Carpenter AE, Golland P (2005) "Voronoi-Based Segmentation of
+    Cells on Image Manifolds", ICCV Workshop on Computer Vision for
     Biomedical Image Applications, 535-543.
     Vincent L, Soille P (1991) "Watersheds in Digital Spaces: An Efficient
     Algorithm Based on Immersion Simulations", IEEE Transactions on Pattern
