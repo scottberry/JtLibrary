@@ -21,11 +21,11 @@ input:
     type: Numeric
     value: 125
     help: >
-      Threshold.
+      Maximum value of background.
 
   - name: method
     type: Scalar
-    value:
+    value: propagation
     options:
       - propagation
       - watershed_gradient
@@ -33,19 +33,23 @@ input:
       - distance_n
       - distance_b
     help: >
-        Segmentation method.
+      Segmentation method.
 
   - name: regularization_factor
     type: Numeric
     value: 0.01
     help: >
-      regularization_factor.
+      Used only for 'propagation' method. Larger values cause the distance
+      between objects to be more important than the intensity image in
+      determining cut lines. Smaller values cause the intensity image to
+      be more important than the distance between objects.
 
   - name: distance_to_dilate
     type: Numeric
     value: 3
     help: >
-      distance_to_dilate.
+      Used only for 'distance_n', 'distance_b' methods. The number of
+      pixels by which the primary objects will be expanded.
 
   - name: fill_holes
     type: Boolean
