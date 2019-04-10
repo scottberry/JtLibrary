@@ -88,7 +88,7 @@ def main(primary_label_image, intensity_image, method, threshold,
 
     There are several methods available to find the dividing lines between
     secondary objects that touch each other:
-    -  *{M_PROPAGATION:s}:* This method will find dividing lines between
+    -  *propagation:* This method will find dividing lines between
        clumped objects where the image stained for secondary objects shows a
        change in staining (i.e., either a dimmer or a brighter line).
        Smoother lines work better, but unlike the Watershed method, small
@@ -100,24 +100,24 @@ def main(primary_label_image, intensity_image, method, threshold,
        Boundaries are preferentially placed where the image’s local
        appearance changes perpendicularly to the boundary (*Jones et al,
        2005*).
-       The {M_PROPAGATION:s} algorithm is the default approach for secondary object
+       The propagation algorithm is the default approach for secondary object
        creation. Each primary object is a "seed" for its corresponding
        secondary object, guided by the input
        image and limited to the foreground region as determined by the chosen
-       thresholding method. λ is a regularization parameter; see the help for
+       thresholding method. lambda is a regularization parameter; see the help for
        the setting for more details. Propagation of secondary object labels is
        by the shortest path to an adjacent primary object from the starting
        (“seeding”) primary object. The seed-to-pixel distances are calculated
        as the sum of absolute differences in a 3x3 (8-connected) image
-       neighborhood, combined with λ via sqrt(differences :sup:`2` +
-       λ :sup:`2`).
-    -  *{M_WATERSHED_G:s}:* This method uses the watershed algorithm
+       neighborhood, combined with lambda via sqrt(differences**2 +
+       lambda**2).
+    -  *watershed_gradient:* This method uses the watershed algorithm
        (*Vincent and Soille, 1991*) to assign pixels to the primary objects
        which act as seeds for the watershed. In this variant, the watershed
        algorithm operates on the Sobel transformed image which computes an
        intensity gradient. This method works best when the image intensity
        drops off or increases rapidly near the boundary between cells.
-    -  *{M_WATERSHED_I:s}:* This method is similar to the above, but it
+    -  *watershed_image:* This method is similar to the above, but it
        uses the inverted intensity of the image for the watershed. The areas
        of lowest intensity will be detected as the boundaries between cells.
        This method works best when there is a saddle of relatively low
@@ -129,10 +129,10 @@ def main(primary_label_image, intensity_image, method, threshold,
        the cell’s location. This is often called the “doughnut” or “annulus”
        or “ring” approach for identifying the cytoplasm. There are two
        methods that can be used:
-       -  *{M_DISTANCE_N:s}*: In this method, the image of the secondary
+       -  *distance_n*: In this method, the image of the secondary
           staining is not used at all; the expanded objects are the final
           secondary objects.
-       -  *{M_DISTANCE_B:s}*: Thresholding of the secondary staining image
+       -  *distance_b*: Thresholding of the secondary staining image
           is used to eliminate background regions from the secondary
           objects. This allows the extent of the secondary objects to be
           limited to a certain distance away from the edge of the primary
@@ -145,11 +145,7 @@ def main(primary_label_image, intensity_image, method, threshold,
     Vincent L, Soille P (1991) "Watersheds in Digital Spaces: An Efficient
     Algorithm Based on Immersion Simulations", *IEEE Transactions on Pattern
     Analysis and Machine Intelligence*, Vol. 13, No. 6, 583-598
-    '''.format(**{"M_PROPAGATION": M_PROPAGATION,
-                  "M_WATERSHED_G": M_WATERSHED_G,
-                  "M_WATERSHED_I": M_WATERSHED_I,
-                  "M_DISTANCE_N": M_DISTANCE_N,
-                  "M_DISTANCE_B": M_DISTANCE_B})
+    '''
 
     if not np.any(primary_label_image == 0):
         secondary_label_image = primary_label_image
