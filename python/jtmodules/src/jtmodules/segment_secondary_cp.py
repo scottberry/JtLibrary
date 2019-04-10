@@ -19,6 +19,28 @@ M_DISTANCE_B = "distance_b"
 Output = collections.namedtuple('Output', ['secondary_label_image', 'figure'])
 
 
+def filter_labels(primary_label_image, secondary_label_image):
+
+    labels_in = np.unique(primary_label_image) - [0]
+    labels_out = np.unique(secondary_label_image) - [0]
+
+    extra_labels = set(labels_out) - set(labels_in)
+    missing_labels = set(labels_in) - set(labels_out)
+
+    if len(extra_labels) != 0:
+        logger.warn(
+            'Removing labels {} detected in secondary_label_image, which'
+            'are not present in primary_label_image'.format(extra_labels))
+        for label in extra_labels:
+            secondary_label_image[secondary_label_image == label] = 0
+    elif len(missing_labels) != 0:
+        logger.warn(
+            'Labels {} detected in primary_label_image, which'
+            'are not present in secondary_label_image'.format(missing_labels))
+
+    return secondary_label_image
+
+
 def main(primary_label_image, intensity_image, method, threshold=None,
          regularization_factor=0.01, distance_to_dilate=3, fill_holes=True,
          plot=False):
@@ -54,7 +76,8 @@ def main(primary_label_image, intensity_image, method, threshold=None,
                     labels_in == 0,return_indices=True)
                 labels_out = np.zeros(labels_in.shape, int)
                 dilate_mask = distances <= distance_to_dilate
-                labels_out[dilate_mask] = labels_in[i[dilate_mask], j[dilate_mask]]
+                labels_out[dilate_mask] = \
+                    labels_in[i[dilate_mask], j[dilate_mask]]
 
             elif method == M_DISTANCE_B:
                 labels_out, distances = centrosome.propagate.propagate(
@@ -72,7 +95,8 @@ def main(primary_label_image, intensity_image, method, threshold=None,
                 sobel_image = np.abs(scipy.ndimage.sobel(img))
 
                 # Combine the seeds and thresholded image to mask the watershed
-                watershed_mask = np.logical_or(thresholded_image, labels_in > 0)
+                watershed_mask = np.logical_or(
+                    thresholded_image, labels_in > 0)
 
                 # Perform the first watershed
                 labels_out = skimage.morphology.watershed(
@@ -88,7 +112,8 @@ def main(primary_label_image, intensity_image, method, threshold=None,
                 inverted_img = 1 - img
 
                 # Combine the seeds and thresholded image to mask the watershed
-                watershed_mask = np.logical_or(thresholded_image, labels_in > 0)
+                watershed_mask = np.logical_or(
+                    thresholded_image, labels_in > 0)
 
                 # Perform the watershed
                 labels_out = skimage.morphology.watershed(
@@ -99,14 +124,13 @@ def main(primary_label_image, intensity_image, method, threshold=None,
                 )
 
             if fill_holes:
-                secondary_label_image = centrosome.cpmorphology.fill_labeled_holes(labels_out)
+                secondary_label_image = \
+                    centrosome.cpmorphology.fill_labeled_holes(labels_out)
             else:
                 secondary_label_image = labels_out
 
-            # re-implement this
-            #        secondary_label_image = self.filter_labels(secondary_label_image,
-            #                                       objects, workspace)
-            secondary_label_image = secondary_label_image.astype(np.int32)
+            secondary_label_image = filter_labels(
+                primary_label_image, secondary_label_image).astype(np.int32)
 
         else:
             logger.info('skipping secondary segmentation')
@@ -122,11 +146,12 @@ def main(primary_label_image, intensity_image, method, threshold=None,
         colorscale = plotting.create_colorscale(
             'Spectral', n=n_objects, permute=True, add_background=True
         )
-        outlines = mh.morph.dilate(mh.labeled.bwperim(secondary_label_image > 0))
+        outlines = mh.morph.dilate(
+            mh.labeled.bwperim(secondary_label_image > 0))
         plots = [
             plotting.create_mask_image_plot(
                 primary_label_image, 'ul', colorscale=colorscale
-                ),
+            ),
             plotting.create_mask_image_plot(
                 secondary_label_image, 'ur', colorscale=colorscale
             ),
@@ -139,7 +164,3 @@ def main(primary_label_image, intensity_image, method, threshold=None,
         figure = str()
 
     return Output(secondary_label_image, figure)
-
-
-
-
