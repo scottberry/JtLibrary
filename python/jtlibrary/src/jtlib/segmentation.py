@@ -27,7 +27,7 @@ def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
         deblend_cont=0):
     '''Detects blobs in `image` using an implementation of
     `SExtractor <http://www.astromatic.net/software/sextractor>`_ [1].
-    
+
     Parameters
     ----------
     image: numpy.ndarray[Union[numpy.uint8, numpy.uint16]]
@@ -44,12 +44,12 @@ def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
         number of deblending thresholds (default: ``500``)
     deblend_cont: int, optional
         minimum contrast ratio for deblending (default: ``0``)
-        
+
     Returns
     -------
     Tuple[numpy.ndarray[numpy.int32]]
         detected blobs and the corresponding centroids
-        
+
     References
     ----------
     .. [1] Bertin, E. & Arnouts, S. 1996: SExtractor: Software for source
@@ -103,7 +103,7 @@ def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
 def expand_objects_watershed(seeds_image, background_image, intensity_image):
     '''Expands objects in `seeds_image` using a watershed transform
     on `intensity_image`.
-    
+
     Parameters
     ----------
     seeds_image: numpy.ndarray[numpy.int32]
@@ -114,7 +114,7 @@ def expand_objects_watershed(seeds_image, background_image, intensity_image):
     intensity_image: numpy.ndarray[Union[numpy.uint8, numpy.uint16]]
         grayscale image; pixel intensities determine how far individual
         objects are expanded
-        
+
     Returns
     -------
     numpy.ndarray[numpy.int32]
@@ -137,7 +137,7 @@ def expand_objects_watershed(seeds_image, background_image, intensity_image):
 
     # Close holes in objects.
     foreground_mask = regions > 0
-    holes = mh.close_holes(foreground_mask) - foreground_mask
+    holes = np.logical_xor(mh.close_holes(foreground_mask),foreground_mask)
     holes = mh.morph.dilate(holes)
     holes_labeled, n_holes = mh.label(holes)
     for i in range(1, n_holes+1):
@@ -182,7 +182,7 @@ def expand_objects_watershed(seeds_image, background_image, intensity_image):
 
 def find_concave_regions(mask, max_dist):
     '''Finds convace regions along the contour of `mask`.
-    
+
     Parameters
     ----------
     mask: numpy.ndarray[numpy.bool]
@@ -217,7 +217,7 @@ NEIGHBORHOOD8 = np.ones((3,3), np.bool)
 def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
         max_circularity, max_convexity, allow_trimming = True):
     '''Separates objects in `clumps_image` based on morphological criteria.
-    
+
     Parameters
     ----------
     clumps_image: numpy.ndarray[Union[numpy.int32, numpy.bool]]
@@ -236,7 +236,7 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
     allow_trimming: boolean
         Some cuts may create a tiny third object. If this boolean is true,
         tertiary objects < trimming_threshold (10) pixels will be removed
-        
+
     Returns
     -------
     numpy.ndarray[numpy.uint32]
