@@ -47,21 +47,17 @@ def main(image_1, image_2, weight_1, weight_2, plot=False):
     Raises
     ------
     ValueError
-        when `weight_1` or `weight_2` are not positive integers
+        when `weight_1` or `weight_2` are negative
     ValueError
         when `image_1` and `image_2` don't have the same dimensions
         and data type and if they don't have unsigned integer type
     '''
-    if not isinstance(weight_1, int):
-        raise TypeError('Weight #1 must have integer type.')
-    if not isinstance(weight_2, int):
-        raise TypeError('Weight #2 must have integer type.')
-    if weight_1 < 1:
-        raise ValueError('Weight #1 must be a positive integer.')
-    if weight_2 < 1:
-        raise ValueError('Weight #2 must be a positive integer.')
-    logger.info('weight for first image: %d', weight_1)
-    logger.info('weight for second image: %d', weight_2)
+    if weight_1 < 0:
+        raise ValueError('Weight #1 must be positive.')
+    if weight_2 < 0:
+        raise ValueError('Weight #2 must be positive.')
+    logger.info('weight for first image: %0.4f', weight_1)
+    logger.info('weight for second image: %0.4f', weight_2)
 
     if image_1.shape != image_2.shape:
         raise ValueError('The two images must have identical dimensions.')
@@ -75,13 +71,15 @@ def main(image_1, image_2, weight_1, weight_2, plot=False):
     else:
         raise ValueError('The two images must have unsigned integer type.')
 
-    logger.info('cast images to type float for arythmetics')
-    img_1 = mh.stretch(image_1, 0, 1, float)
-    img_2 = mh.stretch(image_2, 0, 1, float)
-    logger.info('combine images using the provided weights')
-    combined_image = img_1 * weight_1 + img_2 * weight_2
-    logger.info('cast combined image back to correct data type')
-    combined_image = mh.stretch(combined_image, 0, max_val, image_1.dtype)
+    logger.debug('cast images to type float for arithmetics')
+    img_1 = image_1.astype(np.float32) / max_val
+    img_2 = image_2.astype(np.float32) / max_val
+    logger.debug('combine images using the provided weights')
+    combined_image = (img_1 * float(weight_1) +
+                      img_2 * float(weight_2)) * max_val
+    combined_image[combined_image > max_val] = max_val
+    logger.debug('cast combined image back to correct data type')
+    combined_image = combined_image.astype(image_1.dtype)
 
     if plot:
         from jtlib import plotting
@@ -94,6 +92,6 @@ def main(image_1, image_2, weight_1, weight_2, plot=False):
     else:
         figure = str()
 
-    return Output(output_mask, figure)
+    return Output(combined_image, figure)
 
 
