@@ -299,6 +299,17 @@ def main(primary_label_image, intensity_image, method, threshold,
                 primary_label_image.shape, dtype=np.int32
             )
 
+    # Tissuemaps label images must be separated by lines,
+    # need to identify the boundary pixels
+    borders_with_background = np.zeros(primary_label_image.shape, dtype=np.int32)
+
+    for i in range(1,np.max(secondary_label_image)):
+      borders_with_background = borders_with_background + mh.labeled.border(labeled=secondary_label_image,i=i,j=0)
+
+    all_borders = mh.labeled.borders(secondary_label_image)
+    touching_pixels = np.logical_xor(borders_with_background,all_borders)
+    secondary_label_image[touching_pixels!=0] = 0
+
     n_objects = len(np.unique(secondary_label_image)[1:])
     logger.info('identified %d objects', n_objects)
 
