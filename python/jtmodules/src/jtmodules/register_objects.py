@@ -17,6 +17,7 @@ on disk.
 '''
 import collections
 import logging
+import mahotas as mh
 from jtlib.utils import label
 
 logger = logging.getLogger(__name__)
@@ -44,8 +45,10 @@ def main(mask, relabel=False):
     --------
     :class:`tmlib.workflow.jterator.handles.SegmentedObjects`
     '''
-    if mask.dtype == 'bool' or relabel:
+    if mask.dtype == 'bool':
         label_image = label(mask)
+    elif (relabel and mask.dtype == 'int32'):
+        label_image = mh.labeled.relabel(mask)[0]
     else:
         label_image = mask
     return Output(label_image)
