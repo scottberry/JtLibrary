@@ -21,12 +21,12 @@ from jtlib.utils import label
 
 logger = logging.getLogger(__name__)
 
-VERSION = '0.1.0'
+VERSION = '0.2.0'
 
 Output = collections.namedtuple('Output', ['objects'])
 
 
-def main(mask):
+def main(mask, relabel=False):
     '''Registers objects (connected pixel components) in an image for use by
     other (measurement) modules downstream in the pipeline. In case a binary
     mask is provided the image is automatically labeled.
@@ -44,7 +44,7 @@ def main(mask):
     --------
     :class:`tmlib.workflow.jterator.handles.SegmentedObjects`
     '''
-    if mask.dtype == 'bool':
+    if mask.dtype == 'bool' or relabel:
         label_image = label(mask)
     else:
         label_image = mask
